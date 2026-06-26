@@ -153,13 +153,25 @@ async function fetchFromOverpass(
   throw lastError
 }
 
+// Round to 3 decimal places ≈ 111m precision.
+// Prevents tiny GPS drift from producing a new query key and re-fetching.
+function round3(n: number) {
+  return Math.round(n * 1000) / 1000
+}
+
 export function usePlaces(
   category: Category | null,
   range: RangeMetres,
   location: UserLocation | null
 ) {
   return useQuery({
-    queryKey: ['places', category, range, location?.lat, location?.lon],
+    queryKey: [
+      'places',
+      category,
+      range,
+      location ? round3(location.lat) : null,
+      location ? round3(location.lon) : null,
+    ],
     queryFn: ({ signal }) => fetchFromOverpass(category!, range, location!, signal),
     enabled: !!category && !!location,
     staleTime: 60_000,

@@ -30,7 +30,10 @@ function nearest(places: Place[], loc: UserLocation): Place {
 }
 
 async function fetchToilets(radius: RangeMetres, loc: UserLocation): Promise<Place[]> {
-  const query = `[out:json][timeout:10];(node["amenity"="toilets"](around:${radius},${loc.lat},${loc.lon});node["toilets"="yes"](around:${radius},${loc.lat},${loc.lon}););out body;`
+  // Must match usePlaces query — include ways (polygon toilet blocks) with `out center`
+  // so we don't miss toilets mapped as areas rather than nodes
+  const around = `around:${radius},${loc.lat},${loc.lon}`
+  const query = `[out:json][timeout:10];(node["amenity"="toilets"](${around});node["toilets"="yes"](${around});way["amenity"="toilets"](${around});way["toilets"="yes"](${around}););out center;`
   const encoded = encodeURIComponent(query)
 
   for (const endpoint of ENDPOINTS) {
@@ -45,16 +48,23 @@ async function fetchToilets(radius: RangeMetres, loc: UserLocation): Promise<Pla
       if (!res.ok) continue
       const data = await res.json()
       return (data.elements ?? [])
-        .filter((e: Record<string, unknown>) => e.lat && e.lon)
-        .map((e: Record<string, unknown>) => ({
-          id: `osm-node-${e.id}`,
-          name: ((e.tags as Record<string, string>)?.name) ?? 'Toilet',
-          lat: e.lat as number,
-          lon: e.lon as number,
-          category: 'toilet' as const,
-          source: 'osm' as const,
-          placeType: 'toilets',
-        }))
+        .map((e: Record<string, unknown>) => {
+          // Nodes have lat/lon directly; ways return centroid via `out center`
+          const lat = (e.lat as number) ?? (e.center as Record<string, number>)?.lat
+          const lon = (e.lon as number) ?? (e.center as Record<string, number>)?.lon
+          if (!lat || !lon) return null
+          const tags = (e.tags ?? {}) as Record<string, string>
+          return {
+            id: `osm-${e.type}-${e.id}`,
+            name: tags.name ?? 'Toilet',
+            lat,
+            lon,
+            category: 'toilet' as const,
+            source: 'osm' as const,
+            placeType: tags.amenity ?? 'toilets',
+          }
+        })
+        .filter(Boolean) as Place[]
     } catch { continue }
   }
   return []

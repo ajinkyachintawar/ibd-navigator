@@ -20,3 +20,39 @@ body {
   height: 100%;
   z-index: 0;
 }
+
+/* User location blue pulse dot */
+.user-dot {
+  width: 20px;
+  height: 20px;
+  background: #3b82f6;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.25);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
+  70%  { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
+  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+}
+
+/* Category place markers */
+.place-marker {
+  width: 36px;
+  height: 36px;
+  background: white;
+  border: 2.5px solid #6c3fc5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: transform 0.15s;
+}
+
+.place-marker:hover {
+  transform: scale(1.15);
+}

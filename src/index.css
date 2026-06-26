@@ -57,6 +57,111 @@ body {
   transform: scale(1.15);
 }
 
+/* ── Leaflet popup shell overrides ─────────────────────────── */
+.ibd-popup .leaflet-popup-content-wrapper {
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+.ibd-popup .leaflet-popup-content {
+  margin: 0;
+  width: 100% !important;
+}
+
+.ibd-popup .leaflet-popup-tip-container {
+  margin-top: -1px;
+}
+
+/* ── Card layout ────────────────────────────────────────────── */
+.ibd-card {
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.ibd-card-category {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.ibd-card-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Walking time — biggest thing on the card */
+.ibd-card-distance {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 4px 0 2px;
+}
+
+.ibd-card-time {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1d4ed8;
+  line-height: 1;
+}
+
+.ibd-card-dist {
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* Status + badges */
+.ibd-card-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 6px;
+}
+
+.ibd-card-status {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ibd-card-badge {
+  font-size: 12px;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+/* Directions button */
+.ibd-card-btn {
+  display: block;
+  text-align: center;
+  color: #fff !important;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 16px;
+  border-radius: 12px;
+  text-decoration: none !important;
+  margin-top: 4px;
+  transition: opacity 0.15s, transform 0.1s;
+}
+
+.ibd-card-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
 /* Custom cluster icon — category-coloured, emoji + count */
 .cluster-bubble {
   width: 52px;

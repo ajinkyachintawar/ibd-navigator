@@ -6,31 +6,37 @@ import { formatDistance, getWalkingTime } from '../../utils/formatDistance'
 import { isOpenNow } from '../../utils/isOpenNow'
 
 const EMOJI: Record<string, string> = {
-  toilet: '🚻',
-  pharmacy: '💊',
+  toilet:     '🚻',
+  pharmacy:   '💊',
   restaurant: '🍽️',
 }
 
-const BORDER: Record<string, string> = {
-  toilet: '#6c3fc5',
-  pharmacy: '#27ae60',
-  restaurant: '#e67e22',
+const BORDER_COLOUR: Record<string, string> = {
+  toilet:     '#6c3fc5',
+  pharmacy:   '#0ea5e9',
+  restaurant: '#f97316',
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  toilet:     'Public Toilet',
+  pharmacy:   'Pharmacy',
+  restaurant: 'Restaurant',
 }
 
 function createIcon(category: string) {
   return L.divIcon({
-    html: `<div class="place-marker" style="border-color:${BORDER[category] ?? '#6c3fc5'}">${EMOJI[category] ?? '📍'}</div>`,
+    html: `<div class="place-marker" style="border-color:${BORDER_COLOUR[category] ?? '#6c3fc5'}">${EMOJI[category] ?? '📍'}</div>`,
     className: '',
     iconSize: [36, 36],
     iconAnchor: [18, 18],
-    popupAnchor: [0, -20],
+    popupAnchor: [0, -22],
   })
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  open: '🟢 Open now',
-  closed: '🔴 Closed',
-  unknown: '⚫ Hours unknown',
+const STATUS: Record<string, { label: string; colour: string }> = {
+  open:    { label: 'Open now',     colour: '#16a34a' },
+  closed:  { label: 'Closed',       colour: '#dc2626' },
+  unknown: { label: 'Hours unknown', colour: '#9ca3af' },
 }
 
 interface Props {
@@ -44,36 +50,52 @@ export default function PlaceMarker({ place, userLocation }: Props) {
     ? haversine(userLocation.lat, userLocation.lon, place.lat, place.lon)
     : null
   const openStatus = isOpenNow(place.openingHours)
+  const status = STATUS[openStatus]
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}&travelmode=walking`
+  const accentColour = BORDER_COLOUR[place.category] ?? '#6c3fc5'
 
   return (
     <Marker position={[place.lat, place.lon]} icon={icon}>
-      <Popup minWidth={220}>
-        <div className="flex flex-col gap-1 py-1">
-          <p className="font-bold text-gray-800 text-sm leading-snug">{place.name}</p>
+      <Popup minWidth={280} maxWidth={320} className="ibd-popup">
+        <div className="ibd-card">
+          {/* Category label */}
+          <p className="ibd-card-category" style={{ color: accentColour }}>
+            {EMOJI[place.category]} {CATEGORY_LABEL[place.category]}
+          </p>
 
+          {/* Place name */}
+          <h3 className="ibd-card-name">{place.name}</h3>
+
+          {/* Walking time — the most important info */}
           {dist !== null && (
-            <p className="text-xs text-blue-600 font-semibold">
-              🚶 {getWalkingTime(dist)} · {formatDistance(dist)}
-            </p>
+            <div className="ibd-card-distance">
+              <span className="ibd-card-time">{getWalkingTime(dist)}</span>
+              <span className="ibd-card-dist">· {formatDistance(dist)}</span>
+            </div>
           )}
 
-          <p className="text-xs text-gray-500">{STATUS_LABEL[openStatus]}</p>
+          {/* Status + badges row */}
+          <div className="ibd-card-meta">
+            <span className="ibd-card-status" style={{ color: status.colour }}>
+              ● {status.label}
+            </span>
+            {place.wheelchair && (
+              <span className="ibd-card-badge">♿ Accessible</span>
+            )}
+            {place.fee && (
+              <span className="ibd-card-badge">💰 Fee</span>
+            )}
+          </div>
 
-          {place.wheelchair && (
-            <p className="text-xs text-gray-500">♿ Wheelchair accessible</p>
-          )}
-          {place.fee && (
-            <p className="text-xs text-gray-500">💰 Fee required</p>
-          )}
-
+          {/* Directions button */}
           <a
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 block text-center text-xs font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-lg py-1.5 px-3 transition-colors"
+            className="ibd-card-btn"
+            style={{ background: accentColour }}
           >
-            Get Walking Directions
+            🧭 Get Walking Directions
           </a>
         </div>
       </Popup>

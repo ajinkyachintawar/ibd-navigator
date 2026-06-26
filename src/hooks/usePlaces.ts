@@ -1,18 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Category, Place, RangeMetres, UserLocation } from '../types'
 
-// Public Overpass instances — tried in order on timeout/failure.
-// Sources: https://wiki.openstreetmap.org/wiki/Overpass_API#Public_Overpass_API_instances
-const ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',                    // FOSSGIS main — most up-to-date
-  'https://overpass.private.coffee/api/interpreter',            // No rate limit (formerly kumi.systems)
-  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',   // VK Maps — no rate limit, 384GB RAM
-]
-
-// Identifies our app to the main instance (required by their usage policy)
-const USER_AGENT = 'IBD-Navigator/1.0 (https://github.com/ajinkyachintawar/ibd-navigator)'
-
-const TIMEOUT_MS = 10_000
+import {
+  OVERPASS_ENDPOINTS as ENDPOINTS,
+  OVERPASS_USER_AGENT as USER_AGENT,
+  OVERPASS_TIMEOUT_MS as TIMEOUT_MS,
+} from '../lib/overpass'
 
 /**
  * Builds the Overpass QL query for a given category.

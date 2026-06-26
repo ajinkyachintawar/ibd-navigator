@@ -2,22 +2,27 @@ import 'leaflet/dist/leaflet.css'
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.css'
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css'
 import L from 'leaflet'
+import { useState, useEffect } from 'react'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useAppContext } from '../../context/AppContext'
 import { useGeolocation, IRELAND_CENTRE } from '../../hooks/useGeolocation'
 import { usePlaces } from '../../hooks/usePlaces'
+import { isOpenNow } from '../../utils/isOpenNow'
 import FlyToUser from './FlyToUser'
 import LocationMarker from './LocationMarker'
 import PlaceMarker from './PlaceMarker'
 import CategoryFilter from '../CategoryFilter'
 import RangeSelector from '../RangeSelector'
+import OpenNowToggle from '../Controls/OpenNowToggle'
+import PanicButton from '../PanicButton'
+import CantWaitCard from '../CantWaitCard'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
-  toilet:     '#6c3fc5',   // brand purple
-  pharmacy:   '#0ea5e9',   // sky blue — distinct from green markers
-  restaurant: '#f97316',   // orange
+  toilet:     '#6c3fc5',
+  pharmacy:   '#0ea5e9',
+  restaurant: '#f97316',
 }
 
 const CLUSTER_EMOJI: Record<Category, string> = {
@@ -29,16 +34,11 @@ const CLUSTER_EMOJI: Record<Category, string> = {
 function makeClusterIcon(category: Category) {
   const colour = CLUSTER_COLOUR[category]
   const emoji  = CLUSTER_EMOJI[category]
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (cluster: any) => {
     const count = cluster.getChildCount()
     return L.divIcon({
-      html: `
-        <div class="cluster-bubble" style="background:${colour}">
-          <span class="cluster-emoji">${emoji}</span>
-          <span class="cluster-count">${count}</span>
-        </div>`,
+      html: `<div class="cluster-bubble" style="background:${colour}"><span class="cluster-emoji">${emoji}</span><span class="cluster-count">${count}</span></div>`,
       className: '',
       iconSize: L.point(52, 52),
       iconAnchor: L.point(26, 26),
@@ -47,7 +47,7 @@ function makeClusterIcon(category: Category) {
 }
 
 export default function MapView() {
-  const { state } = useAppContext()
+  const { state, dispatch } = useAppContext()
   const { location, error, loading } = useGeolocation()
   const { data: places = [], isFetching, isError } = usePlaces(
     state.activeCategory,
@@ -55,42 +55,66 @@ export default function MapView() {
     location
   )
 
+  const [showCantWait, setShowCantWait] = useState(false)
+
   const hasGps = !!location && error !== 'location-denied'
+  const locationDenied = error === 'location-denied'
   const clusterIcon = state.activeCategory ? makeClusterIcon(state.activeCategory) : undefined
+
+  // Filter by Open Now — hide only definitively closed places
+  const filteredPlaces = state.openNowOnly
+    ? places.filter(p => isOpenNow(p.openingHours) !== 'closed')
+    : places
+
+  // Auto-revert Open Now if it empties all results
+  useEffect(() => {
+    if (state.openNowOnly && !isFetching && places.length > 0 && filteredPlaces.length === 0) {
+      dispatch({ type: 'TOGGLE_OPEN_NOW' })
+    }
+  }, [state.openNowOnly, isFetching, places.length, filteredPlaces.length, dispatch])
 
   return (
     <div className="relative h-full w-full">
+
       {/* Floating controls */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2 w-full max-w-sm px-4">
         <CategoryFilter />
         <RangeSelector />
+        <OpenNowToggle />
       </div>
 
-      {/* GPS loading banner */}
+      {/* GPS loading */}
       {loading && (
         <div className="absolute top-4 left-4 z-[1000] bg-white/90 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full shadow">
           📡 Getting your location…
         </div>
       )}
 
-      {/* Location denied banner */}
-      {error === 'location-denied' && (
-        <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[1000] bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
+      {/* Location denied */}
+      {locationDenied && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
           ⚠️ Location access denied — showing all of Ireland
         </div>
       )}
 
-      {/* Places fetching indicator */}
+      {/* Fetching indicator */}
       {isFetching && (
         <div className="absolute top-4 right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
           Searching…
         </div>
       )}
 
-      {/* Error — all 3 endpoints failed or timed out */}
+      {/* All endpoints failed */}
       {isError && !isFetching && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-5 py-2.5 rounded-full shadow whitespace-nowrap">
-          ⚠️ Couldn't load places — check your connection and try again
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-5 py-2.5 rounded-full shadow whitespace-nowrap">
+          ⚠️ Couldn't load places — check connection and try again
+        </div>
+      )}
+
+      {/* Open Now reverted toast */}
+      {state.openNowOnly === false && !isFetching && places.length > 0 && filteredPlaces.length === 0 && (
+        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-gray-800 text-white text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
+          No open places found — showing all results
         </div>
       )}
 
@@ -117,11 +141,26 @@ export default function MapView() {
           maxClusterRadius={50}
           iconCreateFunction={clusterIcon}
         >
-          {places.map((place) => (
+          {filteredPlaces.map((place) => (
             <PlaceMarker key={place.id} place={place} userLocation={location} />
           ))}
         </MarkerClusterGroup>
       </MapContainer>
+
+      {/* Panic Button — always visible, bottom centre */}
+      <PanicButton location={location} locationDenied={locationDenied} />
+
+      {/* Can't Wait — bottom right */}
+      <button
+        onClick={() => setShowCantWait(true)}
+        className="fixed bottom-6 right-5 z-[500] bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
+        aria-label="Show Can't Wait card"
+      >
+        🪪 Can't Wait
+      </button>
+
+      {/* Can't Wait Card overlay */}
+      {showCantWait && <CantWaitCard onClose={() => setShowCantWait(false)} />}
     </div>
   )
 }

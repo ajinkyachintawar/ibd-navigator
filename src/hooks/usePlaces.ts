@@ -1,60 +1,128 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Category, Place, RangeMetres, UserLocation } from '../types'
 
-const AMENITY: Record<Category, string> = {
-  toilet: 'toilets',
-  pharmacy: 'pharmacy',
-  restaurant: 'restaurant',
-}
-
-// Three independent public Overpass instances — tried in order on failure
+// Public Overpass instances — tried in order on timeout/failure.
+// Sources: https://wiki.openstreetmap.org/wiki/Overpass_API#Public_Overpass_API_instances
 const ENDPOINTS = [
-  'https://overpass-api.de/api/interpreter',
-  'https://overpass.kumi.systems/api/interpreter',
-  'https://overpass.openstreetmap.ru/api/interpreter',
+  'https://overpass-api.de/api/interpreter',                    // FOSSGIS main — most up-to-date
+  'https://overpass.private.coffee/api/interpreter',            // No rate limit (formerly kumi.systems)
+  'https://maps.mail.ru/osm/tools/overpass/api/interpreter',   // VK Maps — no rate limit, 384GB RAM
 ]
+
+// Identifies our app to the main instance (required by their usage policy)
+const USER_AGENT = 'IBD-Navigator/1.0 (https://github.com/ajinkyachintawar/ibd-navigator)'
 
 const TIMEOUT_MS = 10_000
 
 /**
- * fetch() with a hard client-side timeout AND respect for an external AbortSignal.
- * Whichever fires first (timeout or external cancel) aborts the request.
+ * Builds the Overpass QL query for a given category.
+ *
+ * Toilets uses a union to capture:
+ *   1. Dedicated public toilet nodes (amenity=toilets)
+ *   2. Any node/way tagged toilets=yes (shopping centres, venues)
+ *   3. Common venues (fast food, cafés, supermarkets, pubs, petrol stations)
+ *      that have toilets=yes tagged — these are the ones IBD patients actually use
+ *   4. Toilet ways (polygon toilet blocks) via `out center`
+ *
+ * Pharmacy / restaurant use a simple amenity tag query.
  */
+function buildQuery(category: Category, range: RangeMetres, loc: UserLocation): string {
+  const around = `around:${range},${loc.lat},${loc.lon}`
+
+  if (category === 'toilet') {
+    return `
+[out:json][timeout:15];
+(
+  node["amenity"="toilets"](${around});
+  node["toilets"="yes"](${around});
+  node["amenity"~"^(fast_food|cafe|pub|bar|restaurant|supermarket|fuel|shopping_centre|department_store|cinema|theatre|hospital|clinic|pharmacy)$"]["toilets"="yes"](${around});
+  way["amenity"="toilets"](${around});
+  way["toilets"="yes"](${around});
+);
+out center;
+    `.trim()
+  }
+
+  // Pharmacy and restaurant: straightforward amenity tag
+  const amenity = category === 'pharmacy' ? 'pharmacy' : 'restaurant'
+  return `[out:json][timeout:10];node["amenity"="${amenity}"](${around});out body;`
+}
+
+// Friendly fallback name when a venue has toilets=yes but no name tag
+const VENUE_TOILET_LABEL: Record<string, string> = {
+  fast_food:          'Fast Food (has toilet)',
+  cafe:               'Café (has toilet)',
+  pub:                'Pub (has toilet)',
+  bar:                'Bar (has toilet)',
+  restaurant:         'Restaurant (has toilet)',
+  supermarket:        'Supermarket (has toilet)',
+  fuel:               'Petrol Station (has toilet)',
+  shopping_centre:    'Shopping Centre (has toilet)',
+  department_store:   'Department Store (has toilet)',
+  cinema:             'Cinema (has toilet)',
+  theatre:            'Theatre (has toilet)',
+  hospital:           'Hospital (has toilet)',
+  clinic:             'Clinic (has toilet)',
+  pharmacy:           'Pharmacy (has toilet)',
+}
+
+function parseName(tags: Record<string, string>, category: Category): string {
+  if (tags.name) return tags.name
+  if (category === 'toilet') {
+    return VENUE_TOILET_LABEL[tags.amenity] ?? 'Public Toilet'
+  }
+  return 'Unknown'
+}
+
+type RawElement = {
+  id: number
+  type: 'node' | 'way' | 'relation'
+  lat?: number
+  lon?: number
+  center?: { lat: number; lon: number }
+  tags?: Record<string, string>
+}
+
+function parseElements(data: { elements?: RawElement[] }, category: Category): Place[] {
+  const results: Place[] = []
+
+  for (const el of data.elements ?? []) {
+    const lat = el.lat ?? el.center?.lat
+    const lon = el.lon ?? el.center?.lon
+    if (!lat || !lon) continue
+
+    const tags = el.tags ?? {}
+    results.push({
+      id: `osm-${el.type}-${el.id}`,
+      name: parseName(tags, category),
+      lat,
+      lon,
+      category,
+      source: 'osm',
+      openingHours: tags.opening_hours,
+      wheelchair: tags.wheelchair === 'yes' || tags['toilets:wheelchair'] === 'yes',
+      fee: tags.fee === 'yes',
+    })
+  }
+
+  return results
+}
+
 async function fetchWithTimeout(url: string, externalSignal: AbortSignal): Promise<Response> {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort('timeout'), TIMEOUT_MS)
-
-  // Forward external cancellation (e.g. TanStack Query aborting a stale query)
   const onExternalAbort = () => controller.abort(externalSignal.reason)
   externalSignal.addEventListener('abort', onExternalAbort, { once: true })
 
   try {
-    const res = await fetch(url, { signal: controller.signal })
-    return res
+    return await fetch(url, {
+      signal: controller.signal,
+      headers: { 'User-Agent': USER_AGENT },
+    })
   } finally {
     clearTimeout(timeoutId)
     externalSignal.removeEventListener('abort', onExternalAbort)
   }
-}
-
-function parseElements(data: Record<string, unknown>, category: Category): Place[] {
-  const elements = (data.elements as Record<string, unknown>[]) ?? []
-  return elements
-    .filter((el) => el.lat && el.lon)
-    .map((el) => {
-      const tags = (el.tags ?? {}) as Record<string, string>
-      return {
-        id: `osm-${el.id}`,
-        name: tags.name ?? 'Unknown',
-        lat: el.lat as number,
-        lon: el.lon as number,
-        category,
-        source: 'osm' as const,
-        openingHours: tags.opening_hours,
-        wheelchair: tags.wheelchair === 'yes',
-        fee: tags.fee === 'yes',
-      } satisfies Place
-    })
 }
 
 async function fetchFromOverpass(
@@ -63,15 +131,11 @@ async function fetchFromOverpass(
   loc: UserLocation,
   signal: AbortSignal
 ): Promise<Place[]> {
-  const amenity = AMENITY[category]
-  // Server-side timeout matches our client-side timeout
-  const query = `[out:json][timeout:10];node["amenity"="${amenity}"](around:${range},${loc.lat},${loc.lon});out body;`
+  const query = buildQuery(category, range, loc)
   const encoded = encodeURIComponent(query)
-
   let lastError: Error = new Error('No endpoints available')
 
   for (const endpoint of ENDPOINTS) {
-    // Stop immediately if TanStack Query cancelled this query (e.g. key changed)
     if (signal.aborted) throw new DOMException('Cancelled', 'AbortError')
 
     try {
@@ -80,10 +144,8 @@ async function fetchFromOverpass(
       const data = await res.json()
       return parseElements(data, category)
     } catch (err) {
-      // If the external signal fired, stop trying — no point hitting more endpoints
       if (signal.aborted) throw err
       lastError = err instanceof Error ? err : new Error(String(err))
-      // Otherwise fall through to next endpoint
     }
   }
 
@@ -96,11 +158,10 @@ export function usePlaces(
   location: UserLocation | null
 ) {
   return useQuery({
-    // Key change → TanStack auto-cancels the old request via signal
     queryKey: ['places', category, range, location?.lat, location?.lon],
     queryFn: ({ signal }) => fetchFromOverpass(category!, range, location!, signal),
     enabled: !!category && !!location,
     staleTime: 60_000,
-    retry: false, // we already retry across 3 endpoints internally
+    retry: false,
   })
 }

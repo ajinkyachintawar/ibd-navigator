@@ -17,6 +17,7 @@ export interface Place {
   details?: string
   distance?: number   // metres from user, set at runtime
   openStatus?: OpenStatus
+  placeType?: string  // original OSM amenity tag — e.g. "toilets", "supermarket", "fuel"
 }
 
 export interface UserLocation {

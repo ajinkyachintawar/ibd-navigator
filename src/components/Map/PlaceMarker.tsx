@@ -17,10 +17,36 @@ const BORDER_COLOUR: Record<string, string> = {
   restaurant: '#f97316',
 }
 
+// For venues with toilets=yes, show the actual venue type — not "Public Toilet"
+const TOILET_TYPE_LABEL: Record<string, string> = {
+  toilets:          'Public Toilet',
+  fast_food:        'Fast Food · has toilet',
+  cafe:             'Café · has toilet',
+  pub:              'Pub · has toilet',
+  bar:              'Bar · has toilet',
+  restaurant:       'Restaurant · has toilet',
+  supermarket:      'Supermarket · has toilet',
+  fuel:             'Petrol Station · has toilet',
+  shopping_centre:  'Shopping Centre · has toilet',
+  department_store: 'Department Store · has toilet',
+  cinema:           'Cinema · has toilet',
+  theatre:          'Theatre · has toilet',
+  hospital:         'Hospital · has toilet',
+  clinic:           'Clinic · has toilet',
+  pharmacy:         'Pharmacy · has toilet',
+}
+
 const CATEGORY_LABEL: Record<string, string> = {
   toilet:     'Public Toilet',
   pharmacy:   'Pharmacy',
   restaurant: 'Restaurant',
+}
+
+function getPlaceLabel(category: string, placeType?: string): string {
+  if (category === 'toilet' && placeType) {
+    return TOILET_TYPE_LABEL[placeType] ?? 'Toilet'
+  }
+  return CATEGORY_LABEL[category] ?? category
 }
 
 function createIcon(category: string) {
@@ -58,9 +84,9 @@ export default function PlaceMarker({ place, userLocation }: Props) {
     <Marker position={[place.lat, place.lon]} icon={icon}>
       <Popup minWidth={280} maxWidth={320} className="ibd-popup">
         <div className="ibd-card">
-          {/* Category label */}
+          {/* Category label — shows venue type for non-public toilets */}
           <p className="ibd-card-category" style={{ color: accentColour }}>
-            {EMOJI[place.category]} {CATEGORY_LABEL[place.category]}
+            {EMOJI[place.category]} {getPlaceLabel(place.category, place.placeType).toUpperCase()}
           </p>
 
           {/* Place name */}

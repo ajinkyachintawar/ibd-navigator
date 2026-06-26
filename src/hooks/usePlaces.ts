@@ -102,6 +102,7 @@ function parseElements(data: { elements?: RawElement[] }, category: Category): P
       openingHours: tags.opening_hours,
       wheelchair: tags.wheelchair === 'yes' || tags['toilets:wheelchair'] === 'yes',
       fee: tags.fee === 'yes',
+      placeType: tags.amenity,
     })
   }
 

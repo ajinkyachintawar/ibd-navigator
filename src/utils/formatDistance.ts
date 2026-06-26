@@ -4,5 +4,8 @@ export function getWalkingTime(metres: number): string {
 }
 
 export function formatDistance(metres: number): string {
-  return metres < 1000 ? `${Math.round(metres)} m` : `${(metres / 1000).toFixed(1)} km`
+  //   = non-breaking space — keeps number and unit on the same line always
+  return metres < 1000
+    ? `${Math.round(metres)} m`
+    : `${(metres / 1000).toFixed(1)} km`
 }

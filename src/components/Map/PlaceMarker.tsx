@@ -95,7 +95,7 @@ export default function PlaceMarker({ place, userLocation }: Props) {
             className="ibd-card-btn"
             style={{ background: accentColour }}
           >
-            🧭 Get Walking Directions
+            🧭 Directions
           </a>
         </div>
       </Popup>

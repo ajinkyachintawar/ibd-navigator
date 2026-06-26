@@ -8,9 +8,11 @@ import './index.css'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000,     // cache places for 1 min before re-fetching
-      gcTime: 5 * 60_000,    // keep in memory for 5 min
-      retry: 1,
+      staleTime: 60_000,           // cache places for 1 min
+      gcTime: 5 * 60_000,          // keep in memory for 5 min
+      retry: false,                // we retry internally across 3 endpoints
+      refetchOnWindowFocus: false, // don't re-search when user switches tabs
+      refetchOnReconnect: false,   // don't re-search on network reconnect
     },
   },
 })

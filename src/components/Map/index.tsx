@@ -49,7 +49,7 @@ function makeClusterIcon(category: Category) {
 export default function MapView() {
   const { state } = useAppContext()
   const { location, error, loading } = useGeolocation()
-  const { data: places = [], isFetching } = usePlaces(
+  const { data: places = [], isFetching, isError } = usePlaces(
     state.activeCategory,
     state.range,
     location
@@ -84,6 +84,13 @@ export default function MapView() {
       {isFetching && (
         <div className="absolute top-4 right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
           Searching…
+        </div>
+      )}
+
+      {/* Error — all 3 endpoints failed or timed out */}
+      {isError && !isFetching && (
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-5 py-2.5 rounded-full shadow whitespace-nowrap">
+          ⚠️ Couldn't load places — check your connection and try again
         </div>
       )}
 

@@ -56,3 +56,35 @@ body {
 .place-marker:hover {
   transform: scale(1.15);
 }
+
+/* Custom cluster icon — category-coloured, emoji + count */
+.cluster-bubble {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 3px solid white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.25);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.cluster-bubble:hover {
+  transform: scale(1.1);
+}
+
+.cluster-emoji {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.cluster-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: white;
+  line-height: 1.2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

@@ -1,6 +1,7 @@
 import 'leaflet/dist/leaflet.css'
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.css'
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css'
+import L from 'leaflet'
 import { MapContainer, TileLayer } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useAppContext } from '../../context/AppContext'
@@ -11,6 +12,39 @@ import LocationMarker from './LocationMarker'
 import PlaceMarker from './PlaceMarker'
 import CategoryFilter from '../CategoryFilter'
 import RangeSelector from '../RangeSelector'
+import type { Category } from '../../types'
+
+const CLUSTER_COLOUR: Record<Category, string> = {
+  toilet:     '#6c3fc5',   // brand purple
+  pharmacy:   '#0ea5e9',   // sky blue — distinct from green markers
+  restaurant: '#f97316',   // orange
+}
+
+const CLUSTER_EMOJI: Record<Category, string> = {
+  toilet:     '🚻',
+  pharmacy:   '💊',
+  restaurant: '🍽️',
+}
+
+function makeClusterIcon(category: Category) {
+  const colour = CLUSTER_COLOUR[category]
+  const emoji  = CLUSTER_EMOJI[category]
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (cluster: any) => {
+    const count = cluster.getChildCount()
+    return L.divIcon({
+      html: `
+        <div class="cluster-bubble" style="background:${colour}">
+          <span class="cluster-emoji">${emoji}</span>
+          <span class="cluster-count">${count}</span>
+        </div>`,
+      className: '',
+      iconSize: L.point(52, 52),
+      iconAnchor: L.point(26, 26),
+    })
+  }
+}
 
 export default function MapView() {
   const { state } = useAppContext()
@@ -22,6 +56,7 @@ export default function MapView() {
   )
 
   const hasGps = !!location && error !== 'location-denied'
+  const clusterIcon = state.activeCategory ? makeClusterIcon(state.activeCategory) : undefined
 
   return (
     <div className="relative h-full w-full">
@@ -31,19 +66,21 @@ export default function MapView() {
         <RangeSelector />
       </div>
 
-      {/* GPS loading / denied banner */}
+      {/* GPS loading banner */}
       {loading && (
         <div className="absolute top-4 left-4 z-[1000] bg-white/90 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full shadow">
           📡 Getting your location…
         </div>
       )}
+
+      {/* Location denied banner */}
       {error === 'location-denied' && (
         <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-[1000] bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
           ⚠️ Location access denied — showing all of Ireland
         </div>
       )}
 
-      {/* Places loading indicator */}
+      {/* Places fetching indicator */}
       {isFetching && (
         <div className="absolute top-4 right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
           Searching…
@@ -68,7 +105,11 @@ export default function MapView() {
           </>
         )}
 
-        <MarkerClusterGroup chunkedLoading>
+        <MarkerClusterGroup
+          chunkedLoading
+          maxClusterRadius={50}
+          iconCreateFunction={clusterIcon}
+        >
           {places.map((place) => (
             <PlaceMarker key={place.id} place={place} userLocation={location} />
           ))}

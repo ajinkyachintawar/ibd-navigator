@@ -16,7 +16,7 @@ import CategoryFilter from '../CategoryFilter'
 import RangeSelector from '../RangeSelector'
 import OpenNowToggle from '../Controls/OpenNowToggle'
 import PanicButton from '../PanicButton'
-import CantWaitCard from '../CantWaitCard'
+import NoWaitCard from '../CantWaitCard'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
@@ -150,17 +150,17 @@ export default function MapView() {
       {/* Panic Button — always visible, bottom centre */}
       <PanicButton location={location} locationDenied={locationDenied} />
 
-      {/* Can't Wait — bottom right */}
+      {/* No Wait Card — bottom right */}
       <button
         onClick={() => setShowCantWait(true)}
         className="fixed bottom-6 right-5 z-[500] bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
-        aria-label="Show Can't Wait card"
+        aria-label="Show No Wait card"
       >
-        🪪 Can't Wait
+        🪪 No Wait Card
       </button>
 
-      {/* Can't Wait Card overlay */}
-      {showCantWait && <CantWaitCard onClose={() => setShowCantWait(false)} />}
+      {/* No Wait Card overlay */}
+      {showCantWait && <NoWaitCard onClose={() => setShowCantWait(false)} />}
     </div>
   )
 }

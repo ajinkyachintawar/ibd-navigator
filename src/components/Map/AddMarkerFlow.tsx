@@ -92,8 +92,8 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
       {/* Form bottom sheet */}
       {createPortal(
         <>
-          <div className="fixed inset-0 bg-black/20 z-[3000]" onClick={onClose} />
-          <div className="fixed bottom-0 left-0 right-0 z-[3001] bg-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto">
+          {/* No backdrop — user must be able to drag the pin on the map above the sheet */}
+          <div className="fixed bottom-0 left-0 right-0 z-[3000] bg-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto" style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.18)' }}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-bold text-gray-800">Add a place</h2>
               <button onClick={onClose} className="text-gray-400 text-lg font-bold px-2">✕</button>

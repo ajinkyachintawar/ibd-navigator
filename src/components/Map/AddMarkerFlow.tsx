@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Marker, useMapEvents } from 'react-leaflet'
+import { Marker } from 'react-leaflet'
 import L from 'leaflet'
 import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
@@ -28,7 +28,6 @@ interface Props {
 }
 
 function DraggablePin({ position, onMove }: { position: [number, number]; onMove: (lat: number, lon: number) => void }) {
-  useMapEvents({})
   return (
     <Marker
       position={position}

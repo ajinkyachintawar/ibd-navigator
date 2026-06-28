@@ -117,7 +117,7 @@ export default function PanicButton({ location, locationDenied }: Props) {
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[500] flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
       {status && (
         <div className="bg-black/70 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">
           {status}
@@ -128,7 +128,7 @@ export default function PanicButton({ location, locationDenied }: Props) {
         onClick={handlePanic}
         disabled={loading}
         aria-label="Find nearest toilet now"
-        className="flex items-center gap-2 px-6 py-3.5 rounded-full text-white font-bold text-base shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
+        className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70"
         style={{
           background: loading ? '#c0392b' : '#e74c3c',
           boxShadow: '0 4px 20px rgba(231,76,60,0.55)',

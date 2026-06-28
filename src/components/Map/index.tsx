@@ -97,9 +97,9 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Fetching indicator */}
+      {/* Fetching indicator — below controls to avoid overlap on mobile */}
       {isFetching && (
-        <div className="absolute top-4 right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
+        <div className="absolute top-[155px] right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
           Searching…
         </div>
       )}
@@ -147,17 +147,17 @@ export default function MapView() {
         </MarkerClusterGroup>
       </MapContainer>
 
-      {/* Panic Button — always visible, bottom centre */}
-      <PanicButton location={location} locationDenied={locationDenied} />
-
-      {/* No Wait Card — bottom right */}
-      <button
-        onClick={() => setShowCantWait(true)}
-        className="fixed bottom-6 right-5 z-[500] bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
-        aria-label="Show No Wait card"
-      >
-        🪪 No Wait Card
-      </button>
+      {/* Bottom bar — Panic Button + No Wait Card side by side */}
+      <div className="fixed bottom-6 left-4 right-4 z-[500] flex items-center gap-3">
+        <PanicButton location={location} locationDenied={locationDenied} />
+        <button
+          onClick={() => setShowCantWait(true)}
+          className="flex-shrink-0 bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
+          aria-label="Show No Wait card"
+        >
+          🪪 No Wait
+        </button>
+      </div>
 
       {/* No Wait Card overlay */}
       {showCantWait && <NoWaitCard onClose={() => setShowCantWait(false)} />}

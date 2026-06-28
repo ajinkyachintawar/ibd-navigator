@@ -21,6 +21,8 @@ import OpenNowToggle from '../Controls/OpenNowToggle'
 import PanicButton from '../PanicButton'
 import NoWaitCard from '../CantWaitCard'
 import AuthSheet from '../Auth/AuthSheet'
+import BookmarksPanel from '../Bookmarks/BookmarksPanel'
+import { useBookmarks } from '../../hooks/useBookmarks'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
@@ -61,9 +63,11 @@ export default function MapView() {
     state.activeCategory, state.range, location
   )
 
+  const { bookmarks, isBookmarked, toggleBookmark } = useBookmarks(user)
   const [showCantWait, setShowCantWait] = useState(false)
   const [showAddFlow, setShowAddFlow] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
+  const [showBookmarks, setShowBookmarks] = useState(false)
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
@@ -149,7 +153,14 @@ export default function MapView() {
           iconCreateFunction={clusterIcon}
         >
           {filteredPlaces.map((place) => (
-            <PlaceMarker key={place.id} place={place} userLocation={location} user={user} />
+            <PlaceMarker
+              key={place.id}
+              place={place}
+              userLocation={location}
+              user={user}
+              isBookmarked={isBookmarked(place)}
+              onBookmark={toggleBookmark}
+            />
           ))}
         </MarkerClusterGroup>
 
@@ -164,28 +175,34 @@ export default function MapView() {
         )}
       </MapContainer>
 
-      {/* User avatar / sign-in — top right */}
-      <div className="absolute top-4 right-4 z-[1000]">
-        {user ? (
-          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow"
-            title={user.email ?? 'Signed in'}>
-            {(user.email?.[0] ?? '?').toUpperCase()}
-          </div>
-        ) : null}
-      </div>
+      {/* User avatar — top right */}
+      {user && (
+        <div className="absolute top-4 right-4 z-[1000] w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow"
+          title={user.email ?? 'Signed in'}>
+          {(user.email?.[0] ?? '?').toUpperCase()}
+        </div>
+      )}
 
       {/* Bottom bar */}
-      <div className="fixed bottom-6 left-0 right-0 z-[500] flex items-center justify-center gap-3 px-4">
+      <div className="fixed bottom-6 left-0 right-0 z-[500] flex items-center justify-center gap-2 px-4">
         <PanicButton location={location} locationDenied={locationDenied} />
         <button
-          onClick={() => {
-            if (!user) { setShowAuth(true); return }
-            setShowAddFlow(true)
-          }}
+          onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
           className="flex-shrink-0 bg-purple-600 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
           aria-label="Add a place"
         >
           ＋ Add
+        </button>
+        <button
+          onClick={() => setShowBookmarks(true)}
+          className="flex-shrink-0 bg-white text-gray-700 text-xs font-bold px-3 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative"
+          aria-label="Saved places"
+        >
+          🔖{bookmarks.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {bookmarks.length > 9 ? '9+' : bookmarks.length}
+            </span>
+          )}
         </button>
         <button
           onClick={() => setShowCantWait(true)}
@@ -198,6 +215,17 @@ export default function MapView() {
 
       {showCantWait && <NoWaitCard onClose={() => setShowCantWait(false)} />}
       {showAuth && <AuthSheet onClose={() => setShowAuth(false)} />}
+      {showBookmarks && (
+        <BookmarksPanel
+          bookmarks={bookmarks}
+          onClose={() => setShowBookmarks(false)}
+          onNavigate={(b) => {
+            window.open(`https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lon}&travelmode=walking`, '_blank')
+            setShowBookmarks(false)
+          }}
+          onRemove={(b) => toggleBookmark({ id: b.placeId, name: b.name, lat: b.lat, lon: b.lon, category: b.category as never, source: 'community' })}
+        />
+      )}
     </div>
   )
 }

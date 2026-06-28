@@ -76,31 +76,29 @@ export default function MapView() {
   return (
     <div className="relative h-full w-full">
 
-      {/* Floating controls */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2 w-full max-w-sm px-4">
-        <CategoryFilter />
-        <RangeSelector />
-        <OpenNowToggle />
-      </div>
-
-      {/* GPS loading */}
-      {loading && (
-        <div className="absolute top-4 left-4 z-[1000] bg-white/90 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full shadow">
-          📡 Getting your location…
+      {/* Floating controls — Searching lives here so it's always centred below the stack */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2 w-full max-w-sm px-4 pointer-events-none">
+        <div className="pointer-events-auto w-full flex flex-col items-center gap-2">
+          <CategoryFilter />
+          <RangeSelector />
+          <OpenNowToggle />
         </div>
-      )}
+        {isFetching && (
+          <div className="pointer-events-none bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
+            Searching…
+          </div>
+        )}
+        {loading && (
+          <div className="pointer-events-none bg-white/90 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full shadow">
+            📡 Getting your location…
+          </div>
+        )}
+      </div>
 
       {/* Location denied */}
       {locationDenied && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
           ⚠️ Location access denied — showing all of Ireland
-        </div>
-      )}
-
-      {/* Fetching indicator — below controls to avoid overlap on mobile */}
-      {isFetching && (
-        <div className="absolute top-[155px] right-4 z-[1000] bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
-          Searching…
         </div>
       )}
 
@@ -147,8 +145,8 @@ export default function MapView() {
         </MarkerClusterGroup>
       </MapContainer>
 
-      {/* Bottom bar — Panic Button + No Wait Card side by side */}
-      <div className="fixed bottom-6 left-4 right-4 z-[500] flex items-center gap-3">
+      {/* Bottom bar — centred pill buttons, never stretch full width */}
+      <div className="fixed bottom-6 left-0 right-0 z-[500] flex items-center justify-center gap-3 px-4">
         <PanicButton location={location} locationDenied={locationDenied} />
         <button
           onClick={() => setShowCantWait(true)}

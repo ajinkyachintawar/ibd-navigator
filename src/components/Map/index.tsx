@@ -8,15 +8,19 @@ import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useAppContext } from '../../context/AppContext'
 import { useGeolocation, IRELAND_CENTRE } from '../../hooks/useGeolocation'
 import { usePlaces } from '../../hooks/usePlaces'
+import { useCommunityPlaces } from '../../hooks/useCommunityPlaces'
+import { useAuth } from '../../hooks/useAuth'
 import { isOpenNow } from '../../utils/isOpenNow'
 import FlyToUser from './FlyToUser'
 import LocationMarker from './LocationMarker'
 import PlaceMarker from './PlaceMarker'
+import AddMarkerFlow from './AddMarkerFlow'
 import CategoryFilter from '../CategoryFilter'
 import RangeSelector from '../RangeSelector'
 import OpenNowToggle from '../Controls/OpenNowToggle'
 import PanicButton from '../PanicButton'
 import NoWaitCard from '../CantWaitCard'
+import AuthSheet from '../Auth/AuthSheet'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
@@ -49,29 +53,34 @@ function makeClusterIcon(category: Category) {
 export default function MapView() {
   const { state, dispatch } = useAppContext()
   const { location, error, loading } = useGeolocation()
+  const { user } = useAuth()
   const { data: places = [], isFetching, isError } = usePlaces(
-    state.activeCategory,
-    state.range,
-    location
+    state.activeCategory, state.range, location
+  )
+  const { data: communityPlaces = [], refetch: refetchCommunity } = useCommunityPlaces(
+    state.activeCategory, state.range, location
   )
 
   const [showCantWait, setShowCantWait] = useState(false)
+  const [showAddFlow, setShowAddFlow] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
   const clusterIcon = state.activeCategory ? makeClusterIcon(state.activeCategory) : undefined
 
-  // Filter by Open Now — hide only definitively closed places
+  // Merge OSM + community places, apply Open Now filter
+  const allPlaces = [...places, ...communityPlaces]
   const filteredPlaces = state.openNowOnly
-    ? places.filter(p => isOpenNow(p.openingHours) !== 'closed')
-    : places
+    ? allPlaces.filter(p => isOpenNow(p.openingHours) !== 'closed')
+    : allPlaces
 
   // Auto-revert Open Now if it empties all results
   useEffect(() => {
-    if (state.openNowOnly && !isFetching && places.length > 0 && filteredPlaces.length === 0) {
+    if (state.openNowOnly && !isFetching && allPlaces.length > 0 && filteredPlaces.length === 0) {
       dispatch({ type: 'TOGGLE_OPEN_NOW' })
     }
-  }, [state.openNowOnly, isFetching, places.length, filteredPlaces.length, dispatch])
+  }, [state.openNowOnly, isFetching, allPlaces.length, filteredPlaces.length, dispatch])
 
   return (
     <div className="relative h-full w-full">
@@ -140,14 +149,44 @@ export default function MapView() {
           iconCreateFunction={clusterIcon}
         >
           {filteredPlaces.map((place) => (
-            <PlaceMarker key={place.id} place={place} userLocation={location} />
+            <PlaceMarker key={place.id} place={place} userLocation={location} user={user} />
           ))}
         </MarkerClusterGroup>
+
+        {/* Add marker draggable pin — inside MapContainer so it has map context */}
+        {showAddFlow && user && location && (
+          <AddMarkerFlow
+            user={user}
+            userLocation={location}
+            onClose={() => setShowAddFlow(false)}
+            onAdded={() => refetchCommunity()}
+          />
+        )}
       </MapContainer>
 
-      {/* Bottom bar — centred pill buttons, never stretch full width */}
+      {/* User avatar / sign-in — top right */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        {user ? (
+          <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow"
+            title={user.email ?? 'Signed in'}>
+            {(user.email?.[0] ?? '?').toUpperCase()}
+          </div>
+        ) : null}
+      </div>
+
+      {/* Bottom bar */}
       <div className="fixed bottom-6 left-0 right-0 z-[500] flex items-center justify-center gap-3 px-4">
         <PanicButton location={location} locationDenied={locationDenied} />
+        <button
+          onClick={() => {
+            if (!user) { setShowAuth(true); return }
+            setShowAddFlow(true)
+          }}
+          className="flex-shrink-0 bg-purple-600 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
+          aria-label="Add a place"
+        >
+          ＋ Add
+        </button>
         <button
           onClick={() => setShowCantWait(true)}
           className="flex-shrink-0 bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
@@ -157,8 +196,8 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* No Wait Card overlay */}
       {showCantWait && <NoWaitCard onClose={() => setShowCantWait(false)} />}
+      {showAuth && <AuthSheet onClose={() => setShowAuth(false)} />}
     </div>
   )
 }

@@ -1,32 +1,67 @@
-# React + TypeScript + Vite
+# IBD Navigator
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A free, open-source Progressive Web App for people with Inflammatory Bowel Disease (IBD) in Ireland. Find nearby toilets, pharmacies, and IBD-friendly places — fast.
 
-Currently, two official plugins are available:
+**Live:** https://ibd-navigator.ajinkyachintawar12.workers.dev
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Map** — real-time place search using OpenStreetMap data (toilets, pharmacies, restaurants)
+- **Panic Button** — instantly finds the nearest toilet, auto-escalates search radius if nothing is close
+- **No Wait Card** — digital version of the Crohn's & Colitis Ireland No Wait Card, with a link to register for the physical card
+- **Open Now filter** — shows only places currently open based on OSM opening hours
+- **Community markers** — signed-in users can add and rate places
+- **Bookmarks** — save places locally or to your account
+- **PWA** — installable on iOS and Android, works offline with cached map tiles
 
-## Expanding the Oxlint configuration
+## Stack
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+| Layer | Tech |
+|---|---|
+| Frontend | Vite + React 19 + TypeScript + Tailwind CSS |
+| Map | React-Leaflet v5 + react-leaflet-cluster |
+| Place data | Overpass API (OpenStreetMap), 3-endpoint rotation |
+| Backend | Supabase (PostgreSQL + Auth + Storage) |
+| Hosting | Cloudflare Workers (free tier) |
+| PWA | vite-plugin-pwa + Workbox |
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+## Getting Started
+
+```bash
+git clone https://github.com/ajinkyachintawar/ibd-navigator.git
+cd ibd-navigator
+npm install
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Create a `.env` file:
+
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+Set up the database using `supabase/schema.sql` in your Supabase project, then:
+
+```bash
+npm run dev
+```
+
+## Contributing
+
+Contributions are welcome. Open an issue to discuss what you'd like to add before submitting a PR.
+
+A few areas where help would be valuable:
+- IBD-friendly restaurant tagging and filtering
+- Translations (Irish language support)
+- Accessibility improvements
+- More granular toilet data (baby change, RADAR key, etc.)
+
+## Data Sources
+
+Place data comes from [OpenStreetMap](https://www.openstreetmap.org/) via the [Overpass API](https://overpass-api.de/). No API key required.
+
+## License
+
+MIT

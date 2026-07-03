@@ -53,8 +53,34 @@ function getPlaceLabel(category: string, placeType?: string): string {
   return CATEGORY_LABEL[category] ?? category
 }
 
-function createIcon(category: string, isCommunity: boolean) {
-  const border = BORDER_COLOUR[category] ?? '#6c3fc5'
+// Toilets inside a venue — patient may be expected to be a customer.
+// Short "a café" / "a supermarket" phrasing for the access hint line.
+const VENUE_TOILET_SHORT: Record<string, string> = {
+  fast_food:        'a fast food spot',
+  cafe:             'a café',
+  pub:              'a pub',
+  bar:              'a bar',
+  restaurant:       'a restaurant',
+  supermarket:      'a supermarket',
+  fuel:             'a petrol station',
+  shopping_centre:  'a shopping centre',
+  department_store: 'a department store',
+  cinema:           'a cinema',
+  theatre:          'a theatre',
+  hospital:         'a hospital',
+  clinic:           'a clinic',
+  pharmacy:         'a pharmacy',
+}
+
+// A toilet sitting inside a venue (café, shop...) vs a standalone public one.
+// Community-added toilets carry placeType 'toilet' and standalone OSM ones
+// carry 'toilets' — both count as walk-in public.
+function isVenueToilet(place: Place): boolean {
+  return place.category === 'toilet' && !!place.placeType && place.placeType in VENUE_TOILET_SHORT
+}
+
+function createIcon(category: string, isCommunity: boolean, borderOverride?: string) {
+  const border = borderOverride ?? BORDER_COLOUR[category] ?? '#6c3fc5'
   const emoji  = EMOJI[category] ?? '📍'
   // Community markers: dashed border + 👤 badge
   const style = isCommunity
@@ -83,15 +109,21 @@ interface Props {
   userLocation: UserLocation | null
   user: User | null
   isBookmarked: boolean
+  isIbdFriendly: boolean
   onBookmark: (place: Place) => void
 }
 
-export default function PlaceMarker({ place, userLocation, user, isBookmarked, onBookmark }: Props) {
+export default function PlaceMarker({ place, userLocation, user, isBookmarked, isIbdFriendly, onBookmark }: Props) {
   const [showRating, setShowRating] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
 
   const isCommunity = place.source === 'community'
-  const icon = createIcon(place.category, isCommunity)
+  const venueToilet = isVenueToilet(place)
+  // Walk-in public toilets get a green pin so the eye lands on the safe bets first;
+  // venue toilets keep the standard purple — informative, not alarming.
+  const borderOverride =
+    place.category === 'toilet' ? (venueToilet ? undefined : '#16a34a') : undefined
+  const icon = createIcon(place.category, isCommunity, borderOverride)
   const dist = userLocation
     ? haversine(userLocation.lat, userLocation.lon, place.lat, place.lon)
     : null
@@ -113,6 +145,11 @@ export default function PlaceMarker({ place, userLocation, user, isBookmarked, o
                   👤 COMMUNITY
                 </span>
               )}
+              {isIbdFriendly && (
+                <span className="ml-2 text-[9px] font-bold bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">
+                  💜 IBD-FRIENDLY
+                </span>
+              )}
             </p>
 
             <h3 className="ibd-card-name">{place.name}</h3>
@@ -132,6 +169,34 @@ export default function PlaceMarker({ place, userLocation, user, isBookmarked, o
               {place.wheelchair && <span className="ibd-card-badge">♿ Accessible</span>}
               {place.fee && <span className="ibd-card-badge">💰 Fee</span>}
             </div>
+
+            {/* Access hint — the patient's real question: "can I just walk in?" */}
+            {place.category === 'toilet' && (
+              venueToilet ? (
+                <p className="text-[11px] text-amber-700 leading-snug mt-1">
+                  🚪 Inside {VENUE_TOILET_SHORT[place.placeType!]} — you may need to be a customer
+                </p>
+              ) : (
+                <p className="text-[11px] text-green-700 font-medium leading-snug mt-1">
+                  ✅ Public toilet — walk straight in
+                </p>
+              )
+            )}
+
+            {/* Accessible toilets are often locked — flag that a key may be needed */}
+            {place.category === 'toilet' && place.wheelchair && (
+              <p className="text-[11px] text-gray-500 leading-snug mt-1">
+                🔑 May be locked — needs an accessible-toilet key.{' '}
+                <a
+                  href="https://www.iwa.ie/faq/where-can-i-get-the-universal-key-for-accessible-toilets/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-purple-600 font-semibold underline"
+                >
+                  Get one
+                </a>
+              </p>
+            )}
 
             {/* Action buttons */}
             <a

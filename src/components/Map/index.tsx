@@ -23,6 +23,7 @@ import NoWaitCard from '../CantWaitCard'
 import AuthSheet from '../Auth/AuthSheet'
 import BookmarksPanel from '../Bookmarks/BookmarksPanel'
 import { useBookmarks } from '../../hooks/useBookmarks'
+import { useIbdFriendly, ibdKeyForPlace } from '../../hooks/useIbdFriendly'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
@@ -56,12 +57,19 @@ export default function MapView() {
   const { state, dispatch } = useAppContext()
   const { location, error, loading } = useGeolocation()
   const { user } = useAuth()
+
+  // Flare mode overrides at render time — never mutates the user's stored filters,
+  // so exiting flare restores their previous category/range for free.
+  const effectiveCategory = state.flareMode ? 'toilet' : state.activeCategory
+  const effectiveRange = state.flareMode ? 500 : state.range
+
   const { data: places = [], isFetching, isError } = usePlaces(
-    state.activeCategory, state.range, location
+    effectiveCategory, effectiveRange, location
   )
   const { data: communityPlaces = [], refetch: refetchCommunity } = useCommunityPlaces(
-    state.activeCategory, state.range, location
+    effectiveCategory, effectiveRange, location
   )
+  const { data: ibdSet } = useIbdFriendly(effectiveRange, location)
 
   const { bookmarks, isBookmarked, toggleBookmark } = useBookmarks(user)
   const [showCantWait, setShowCantWait] = useState(false)
@@ -71,7 +79,7 @@ export default function MapView() {
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
-  const clusterIcon = state.activeCategory ? makeClusterIcon(state.activeCategory) : undefined
+  const clusterIcon = effectiveCategory ? makeClusterIcon(effectiveCategory) : undefined
 
   // Merge OSM + community places, apply Open Now filter
   const allPlaces = [...places, ...communityPlaces]
@@ -91,11 +99,32 @@ export default function MapView() {
 
       {/* Floating controls — Searching lives here so it's always centred below the stack */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2 w-full max-w-sm px-4 pointer-events-none">
-        <div className="pointer-events-auto w-full flex flex-col items-center gap-2">
-          <CategoryFilter />
-          <RangeSelector />
-          <OpenNowToggle />
-        </div>
+        {state.flareMode ? (
+          <div className="pointer-events-auto w-full bg-rose-600 text-white rounded-2xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-bold leading-tight">Flare mode</p>
+              <p className="text-[11px] text-rose-100 leading-tight">Nearest toilets within 500m only</p>
+            </div>
+            <button
+              onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
+              className="flex-shrink-0 bg-white text-rose-600 text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform"
+            >
+              Exit
+            </button>
+          </div>
+        ) : (
+          <div className="pointer-events-auto w-full flex flex-col items-center gap-2">
+            <button
+              onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
+              className="bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow active:scale-95 transition-transform"
+            >
+              🩸 Flare mode
+            </button>
+            <CategoryFilter />
+            <RangeSelector />
+            <OpenNowToggle />
+          </div>
+        )}
         {isFetching && (
           <div className="pointer-events-none bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
             Searching…
@@ -159,6 +188,7 @@ export default function MapView() {
               userLocation={location}
               user={user}
               isBookmarked={isBookmarked(place)}
+              isIbdFriendly={ibdSet?.has(ibdKeyForPlace(place)) ?? false}
               onBookmark={toggleBookmark}
             />
           ))}
@@ -195,10 +225,13 @@ export default function MapView() {
         </button>
         <button
           onClick={() => setShowBookmarks(true)}
-          className="flex-shrink-0 bg-white text-gray-700 text-xs font-bold px-3 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative"
+          className="flex-shrink-0 bg-purple-100 text-purple-700 px-4 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative flex items-center"
           aria-label="Saved places"
         >
-          🔖{bookmarks.length > 0 && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
+          </svg>
+          {bookmarks.length > 0 && (
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
               {bookmarks.length > 9 ? '9+' : bookmarks.length}
             </span>

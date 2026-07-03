@@ -33,4 +33,5 @@ export interface AppState {
   range: RangeMetres
   openNowOnly: boolean
   showCantWait: boolean
+  flareMode: boolean
 }

@@ -8,6 +8,7 @@ type Action =
   | { type: 'SET_RANGE'; range: RangeMetres }
   | { type: 'TOGGLE_OPEN_NOW' }
   | { type: 'TOGGLE_CANT_WAIT' }
+  | { type: 'TOGGLE_FLARE' }
 
 const initial: AppState = {
   userLocation: null,
@@ -15,6 +16,7 @@ const initial: AppState = {
   range: 1000,
   openNowOnly: false,
   showCantWait: false,
+  flareMode: false,
 }
 
 function reducer(state: AppState, action: Action): AppState {
@@ -29,6 +31,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, openNowOnly: !state.openNowOnly }
     case 'TOGGLE_CANT_WAIT':
       return { ...state, showCantWait: !state.showCantWait }
+    case 'TOGGLE_FLARE':
+      return { ...state, flareMode: !state.flareMode }
     default:
       return state
   }

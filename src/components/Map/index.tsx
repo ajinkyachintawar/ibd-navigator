@@ -245,37 +245,47 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Bottom bar */}
-      <div className="fixed bottom-6 left-0 right-0 z-[500] flex items-center justify-center gap-2 px-4">
-        <PanicButton location={location} locationDenied={locationDenied} />
-        <button
-          onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
-          className="flex-shrink-0 bg-brand-700 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
-          aria-label="Add a place"
-        >
-          ＋ Add
-        </button>
-        <button
-          onClick={() => setShowBookmarks(true)}
-          className="flex-shrink-0 bg-brand-100 text-brand-800 px-4 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative flex items-center"
-          aria-label="Saved places"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
-          </svg>
-          {bookmarks.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-              {bookmarks.length > 9 ? '9+' : bookmarks.length}
-            </span>
-          )}
-        </button>
-        <button
-          onClick={() => setShowCantWait(true)}
-          className="flex-shrink-0 bg-gray-800 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
-          aria-label="Show No Wait card"
-        >
-          🪪 No Wait
-        </button>
+      {/* Bottom action bar */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[500] w-full max-w-md px-3">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-2 flex items-center gap-1.5">
+          <div className="flex-1 min-w-0">
+            <PanicButton location={location} locationDenied={locationDenied} />
+          </div>
+
+          <button
+            onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
+            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-brand-800 dark:text-brand-200 hover:bg-brand-50 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Add a place"
+          >
+            <span className="text-lg leading-none">＋</span>
+            <span className="text-[10px] font-semibold">Add</span>
+          </button>
+
+          <button
+            onClick={() => setShowBookmarks(true)}
+            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-brand-800 dark:text-brand-200 hover:bg-brand-50 dark:hover:bg-gray-800 transition-colors relative"
+            aria-label="Saved places"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
+            </svg>
+            <span className="text-[10px] font-semibold">Saved</span>
+            {bookmarks.length > 0 && (
+              <span className="absolute top-0 right-0 w-4 h-4 bg-brand-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {bookmarks.length > 9 ? '9+' : bookmarks.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setShowCantWait(true)}
+            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Show No Wait card"
+          >
+            <span className="text-lg leading-none">🪪</span>
+            <span className="text-[10px] font-semibold">No-Wait</span>
+          </button>
+        </div>
       </div>
 
       {showCantWait && <NoWaitCard onClose={() => setShowCantWait(false)} />}

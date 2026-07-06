@@ -7,14 +7,15 @@ import type { Category, UserLocation } from '../../types'
 import { isWithinIreland } from '../../hooks/useCommunityPlaces'
 import type { User } from '@supabase/supabase-js'
 
-const CATEGORIES: { value: Category; label: string; emoji: string }[] = [
-  { value: 'toilet',     label: 'Toilet',     emoji: '🚻' },
-  { value: 'pharmacy',   label: 'Pharmacy',   emoji: '💊' },
-  { value: 'restaurant', label: 'Restaurant', emoji: '🍽️' },
+const CATEGORIES: { value: Category; label: string }[] = [
+  { value: 'toilet',     label: 'Toilets' },
+  { value: 'pharmacy',   label: 'Pharmacies' },
+  { value: 'hospital',   label: 'Hospitals' },
+  { value: 'restaurant', label: 'Restaurants' },
 ]
 
 const pinIcon = L.divIcon({
-  html: `<div style="width:20px;height:20px;background:#6c3fc5;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
+  html: `<div style="width:20px;height:20px;background:#0f766e;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
   className: '',
   iconSize: [20, 20],
   iconAnchor: [10, 10],
@@ -46,8 +47,7 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
   const [position, setPosition] = useState<[number, number]>(start)
   const [category, setCategory] = useState<Category>('toilet')
   const [name, setName] = useState('')
-  const [wheelchair, setWheelchair] = useState(false)
-  const [fee, setFee] = useState(false)
+  const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -67,8 +67,7 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
       lat,
       lon,
       name: name.trim() || null,
-      wheelchair,
-      fee,
+      details: notes.trim() || null,
       source: 'community',
       user_id: user.id,
     })
@@ -93,54 +92,34 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
       {createPortal(
         <>
           {/* No backdrop — user must be able to drag the pin on the map above the sheet */}
-          <div className="fixed bottom-0 left-0 right-0 z-[3000] bg-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto" style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.18)' }}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-gray-800">Add a place</h2>
-              <button onClick={onClose} className="text-gray-400 text-lg font-bold px-2">✕</button>
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[3000] bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto"
+            style={{ boxShadow: '0 -4px 24px rgba(0,0,0,0.18)' }}
+          >
+            <div className="flex items-start justify-between mb-1">
+              <div>
+                <h2 className="text-lg font-bold">Add a place</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-[85%]">
+                  Help other patients — shared with the community after a quick review.
+                </p>
+              </div>
+              <button onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300 flex-shrink-0">✕</button>
             </div>
 
-            <p className="text-xs text-gray-500 mb-4">
-              Drag the purple pin on the map to the exact location
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 mt-3">
+              Drag the pin on the map to the exact location
             </p>
 
             {/* Category */}
-            <div className="flex gap-2 mb-4">
-              {CATEGORIES.map(({ value, label, emoji }) => (
+            <div className="flex flex-wrap gap-2 mb-4">
+              {CATEGORIES.map(({ value, label }) => (
                 <button
                   key={value}
                   onClick={() => setCategory(value)}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all ${
                     category === value
-                      ? 'bg-brand-700 text-white'
-                      : 'bg-gray-100 text-gray-600'
-                  }`}
-                >
-                  {emoji} {label}
-                </button>
-              ))}
-            </div>
-
-            {/* Name */}
-            <input
-              type="text"
-              placeholder="Name (optional)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={100}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-brand-500"
-            />
-
-            {/* Toggles */}
-            <div className="flex gap-3 mb-5">
-              {[
-                { label: '♿ Accessible', value: wheelchair, set: setWheelchair },
-                { label: '💰 Fee', value: fee, set: setFee },
-              ].map(({ label, value, set }) => (
-                <button
-                  key={label}
-                  onClick={() => set(!value)}
-                  className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    value ? 'bg-green-100 text-green-700 border border-green-300' : 'bg-gray-100 text-gray-500'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
                   }`}
                 >
                   {label}
@@ -148,14 +127,34 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
               ))}
             </div>
 
+            {/* Name */}
+            <input
+              type="text"
+              placeholder="Place name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={100}
+              className="w-full border border-gray-200 dark:border-gray-700 bg-transparent rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-brand-500"
+            />
+
+            {/* Notes */}
+            <textarea
+              placeholder="Notes (accessibility, code needed, cleanliness...)"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              maxLength={300}
+              rows={2}
+              className="w-full border border-gray-200 dark:border-gray-700 bg-transparent rounded-xl px-4 py-3 text-sm mb-5 outline-none focus:border-brand-500 resize-none"
+            />
+
             {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-3.5 rounded-xl bg-brand-700 text-white font-bold text-sm disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl bg-green-800 text-white font-bold text-sm disabled:opacity-60"
             >
-              {saving ? 'Saving…' : 'Add to Map'}
+              {saving ? 'Saving…' : 'Submit to community map'}
             </button>
           </div>
         </>,

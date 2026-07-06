@@ -383,6 +383,7 @@ export default function MapView() {
       {showBookmarks && (
         <BookmarksPanel
           bookmarks={bookmarks}
+          userLocation={activeLocation}
           onClose={() => setShowBookmarks(false)}
           onNavigate={(b) => {
             window.open(`https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lon}&travelmode=walking`, '_blank')

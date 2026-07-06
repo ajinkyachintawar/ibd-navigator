@@ -127,50 +127,66 @@ export default function PanicButton({ location, locationDenied, variant = 'pill'
             {status}
           </div>
         )}
-        <button
-          onClick={handlePanic}
-          disabled={loading}
-          aria-label="SOS — find nearest toilet now"
-          className="w-20 h-20 rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70"
-          style={bg}
-        >
-          {loading ? (
-            <span className="inline-block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
+        <div className="relative w-20 h-20">
+          {!loading && (
             <>
-              <span className="text-lg font-extrabold tracking-wide">SOS</span>
-              <span className="text-[10px] font-bold mt-0.5">FIND WC</span>
+              <span className="sos-ring" />
+              <span className="sos-ring sos-ring-delay" />
             </>
           )}
-        </button>
+          <button
+            onClick={handlePanic}
+            disabled={loading}
+            aria-label="SOS — find nearest toilet now"
+            className="relative z-10 w-20 h-20 rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70"
+            style={bg}
+          >
+            {loading ? (
+              <span className="inline-block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                <span className="text-lg font-extrabold tracking-wide">SOS</span>
+                <span className="text-[10px] font-bold mt-0.5">FIND WC</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 w-full">
       {status && (
         <div className="bg-black/70 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">
           {status}
         </div>
       )}
 
-      <button
-        onClick={handlePanic}
-        disabled={loading}
-        aria-label="Find nearest toilet now"
-        className="flex items-center gap-2 px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
-        style={bg}
-      >
-        {loading ? (
+      <div className="relative w-full">
+        {!loading && (
           <>
-            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Searching…
+            <span className="sos-ring" />
+            <span className="sos-ring sos-ring-delay" />
           </>
-        ) : (
-          <>🚨 Find Nearest Toilet</>
         )}
-      </button>
+        <button
+          onClick={handlePanic}
+          disabled={loading}
+          aria-label="SOS — find nearest restroom"
+          className="relative z-10 flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
+          style={bg}
+        >
+          {loading ? (
+            <>
+              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Searching…
+            </>
+          ) : (
+            <>SOS — Find nearest restroom</>
+          )}
+        </button>
+      </div>
     </div>
   )
 }

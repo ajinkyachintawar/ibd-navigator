@@ -25,6 +25,7 @@ import PanicButton from '../PanicButton'
 import NoWaitCard from '../CantWaitCard'
 import AuthSheet from '../Auth/AuthSheet'
 import BookmarksPanel from '../Bookmarks/BookmarksPanel'
+import FlareLogSheet from '../FlareLog/FlareLogSheet'
 import { useBookmarks } from '../../hooks/useBookmarks'
 import { useIbdFriendly, ibdKeyForPlace } from '../../hooks/useIbdFriendly'
 import type { Category, Place } from '../../types'
@@ -69,6 +70,14 @@ function FlyTo({ target }: { target: UserLocation | null }) {
   return null
 }
 
+// Drops Leaflet's own "Leaflet" self-promo prefix from the attribution control.
+// OSM/CARTO attribution stays — that one's required by their licence, this isn't.
+function TrimAttribution() {
+  const map = useMap()
+  useEffect(() => { map.attributionControl.setPrefix(false) }, [map])
+  return null
+}
+
 export default function MapView() {
   const { state, dispatch } = useAppContext()
   const { location, error, loading } = useGeolocation()
@@ -104,6 +113,7 @@ export default function MapView() {
   const [showAddFlow, setShowAddFlow] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [showBookmarks, setShowBookmarks] = useState(false)
+  const [showFlareLog, setShowFlareLog] = useState(false)
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
@@ -171,7 +181,7 @@ export default function MapView() {
             { label: 'No-Wait Card', icon: 'ID', color: '#0f766e', onClick: () => setShowCantWait(true) },
             { label: 'Saved places', icon: '🔖', color: '#7c3aed', onClick: () => setShowBookmarks(true), badge: bookmarks.length },
             { label: 'Add a place', icon: '＋', color: '#c2410c', onClick: () => user ? setShowAddFlow(true) : setShowAuth(true) },
-            { label: 'Flare mode', icon: '🩸', color: '#2563eb', onClick: () => dispatch({ type: 'TOGGLE_FLARE' }) },
+            { label: 'Flare log', icon: '📝', color: '#2563eb', onClick: () => setShowFlareLog(true) },
           ].map(({ label, icon, color, onClick, badge }) => (
             <button key={label} onClick={onClick} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
               <span className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: color }}>{icon}</span>
@@ -266,6 +276,7 @@ export default function MapView() {
           </>
         )}
         <FlyTo target={searchLoc} />
+        <TrimAttribution />
 
         {CATEGORIES.map((c) =>
           placesByCat[c].length > 0 ? (
@@ -309,58 +320,61 @@ export default function MapView() {
         </div>
       )}
 
-      {/* SOS floating action button — bottom right, above the bar */}
-      <div className="fixed bottom-24 right-4 z-[600] lg:hidden">
-        <PanicButton location={location} locationDenied={locationDenied} variant="fab" />
-      </div>
+      {/* Bottom action bar + SOS FAB — grouped in one container so the FAB stays
+          anchored to the bar's own right edge, not the viewport's (they used to
+          drift apart on wider phones since the bar is centred with max-w-md). */}
+      <div className="fixed bottom-4 inset-x-0 z-[500] w-full max-w-md mx-auto px-3 lg:hidden">
+        <div className="relative">
+          <div className="absolute right-0 bottom-full mb-3">
+            <PanicButton location={location} locationDenied={locationDenied} variant="fab" />
+          </div>
 
-      {/* Bottom action bar — 4 colour-coded tiles (No-Wait / Saved / Add / Flare) */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[500] w-full max-w-md px-3 lg:hidden">
-        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur rounded-2xl shadow-xl px-2 py-2 flex items-center justify-around">
-          <button
-            onClick={() => setShowCantWait(true)}
-            className="flex flex-col items-center gap-1 px-3 py-1"
-            aria-label="Show No-Wait card"
-          >
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#0f766e' }}>ID</span>
-            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">No-Wait</span>
-          </button>
+          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur rounded-2xl shadow-xl px-2 py-2 flex items-center justify-around">
+            <button
+              onClick={() => setShowCantWait(true)}
+              className="flex flex-col items-center gap-1 px-3 py-1"
+              aria-label="Show No-Wait card"
+            >
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#0f766e' }}>ID</span>
+              <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">No-Wait</span>
+            </button>
 
-          <button
-            onClick={() => setShowBookmarks(true)}
-            className="flex flex-col items-center gap-1 px-3 py-1 relative"
-            aria-label="Saved places"
-          >
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ background: '#7c3aed' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
-              </svg>
-            </span>
-            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Saved</span>
-            {bookmarks.length > 0 && (
-              <span className="absolute top-0 right-1.5 w-4 h-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                {bookmarks.length > 9 ? '9+' : bookmarks.length}
+            <button
+              onClick={() => setShowBookmarks(true)}
+              className="flex flex-col items-center gap-1 px-3 py-1 relative"
+              aria-label="Saved places"
+            >
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ background: '#7c3aed' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
+                </svg>
               </span>
-            )}
-          </button>
+              <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Saved</span>
+              {bookmarks.length > 0 && (
+                <span className="absolute top-0 right-1.5 w-4 h-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                  {bookmarks.length > 9 ? '9+' : bookmarks.length}
+                </span>
+              )}
+            </button>
 
-          <button
-            onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
-            className="flex flex-col items-center gap-1 px-3 py-1"
-            aria-label="Add a place"
-          >
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl font-bold leading-none" style={{ background: '#c2410c' }}>＋</span>
-            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Add place</span>
-          </button>
+            <button
+              onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
+              className="flex flex-col items-center gap-1 px-3 py-1"
+              aria-label="Add a place"
+            >
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl font-bold leading-none" style={{ background: '#c2410c' }}>＋</span>
+              <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Add place</span>
+            </button>
 
-          <button
-            onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
-            className="flex flex-col items-center gap-1 px-3 py-1"
-            aria-label="Flare mode"
-          >
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: state.flareMode ? '#e74c3c' : '#2563eb' }}>🩸</span>
-            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Flare</span>
-          </button>
+            <button
+              onClick={() => setShowFlareLog(true)}
+              className="flex flex-col items-center gap-1 px-3 py-1"
+              aria-label="Flare log"
+            >
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base" style={{ background: '#2563eb' }}>📝</span>
+              <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Flare log</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -375,6 +389,12 @@ export default function MapView() {
             setShowBookmarks(false)
           }}
           onRemove={(b) => toggleBookmark({ id: b.placeId, name: b.name, lat: b.lat, lon: b.lon, category: b.category as never, source: 'community' })}
+        />
+      )}
+      {showFlareLog && (
+        <FlareLogSheet
+          onClose={() => setShowFlareLog(false)}
+          onQuickFlareMode={() => { dispatch({ type: 'TOGGLE_FLARE' }); setShowFlareLog(false) }}
         />
       )}
     </div>

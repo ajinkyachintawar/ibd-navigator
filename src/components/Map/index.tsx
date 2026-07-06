@@ -27,25 +27,25 @@ import { useIbdFriendly, ibdKeyForPlace } from '../../hooks/useIbdFriendly'
 import type { Category } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
-  toilet:     '#6c3fc5',
-  pharmacy:   '#0ea5e9',
-  restaurant: '#f97316',
+  toilet:     '#15803d',
+  pharmacy:   '#7c3aed',
+  restaurant: '#c2410c',
 }
 
-const CLUSTER_EMOJI: Record<Category, string> = {
-  toilet:     '🚻',
-  pharmacy:   '💊',
-  restaurant: '🍽️',
+const CLUSTER_LABEL: Record<Category, string> = {
+  toilet:     'WC',
+  pharmacy:   'Rx',
+  restaurant: 'R',
 }
 
 function makeClusterIcon(category: Category) {
   const colour = CLUSTER_COLOUR[category]
-  const emoji  = CLUSTER_EMOJI[category]
+  const label  = CLUSTER_LABEL[category]
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (cluster: any) => {
     const count = cluster.getChildCount()
     return L.divIcon({
-      html: `<div class="cluster-bubble" style="background:${colour}"><span class="cluster-emoji">${emoji}</span><span class="cluster-count">${count}</span></div>`,
+      html: `<div class="cluster-bubble" style="background:${colour}"><span class="cluster-emoji">${label}</span><span class="cluster-count">${count}</span></div>`,
       className: '',
       iconSize: L.point(52, 52),
       iconAnchor: L.point(26, 26),
@@ -126,7 +126,7 @@ export default function MapView() {
           </div>
         )}
         {isFetching && (
-          <div className="pointer-events-none bg-white/90 text-purple-600 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
+          <div className="pointer-events-none bg-white/90 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
             Searching…
           </div>
         )}
@@ -207,7 +207,7 @@ export default function MapView() {
 
       {/* User avatar — top right */}
       {user && (
-        <div className="absolute top-4 right-4 z-[1000] w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-xs font-bold shadow"
+        <div className="absolute top-4 right-4 z-[1000] w-8 h-8 rounded-full bg-brand-700 flex items-center justify-center text-white text-xs font-bold shadow"
           title={user.email ?? 'Signed in'}>
           {(user.email?.[0] ?? '?').toUpperCase()}
         </div>
@@ -218,21 +218,21 @@ export default function MapView() {
         <PanicButton location={location} locationDenied={locationDenied} />
         <button
           onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
-          className="flex-shrink-0 bg-purple-600 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
+          className="flex-shrink-0 bg-brand-700 text-white text-xs font-bold px-4 py-3.5 rounded-full shadow-lg whitespace-nowrap transition-transform active:scale-95"
           aria-label="Add a place"
         >
           ＋ Add
         </button>
         <button
           onClick={() => setShowBookmarks(true)}
-          className="flex-shrink-0 bg-purple-100 text-purple-700 px-4 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative flex items-center"
+          className="flex-shrink-0 bg-brand-100 text-brand-800 px-4 py-3.5 rounded-full shadow-lg transition-transform active:scale-95 relative flex items-center"
           aria-label="Saved places"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
           </svg>
           {bookmarks.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
               {bookmarks.length > 9 ? '9+' : bookmarks.length}
             </span>
           )}

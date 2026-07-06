@@ -21,7 +21,7 @@ export default function RangeSelector() {
             onClick={() => dispatch({ type: 'SET_RANGE', range: value })}
             className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
               active
-                ? 'bg-purple-600 text-white shadow-sm'
+                ? 'bg-brand-700 text-white shadow-sm'
                 : 'text-gray-500 hover:bg-gray-100'
             }`}
           >

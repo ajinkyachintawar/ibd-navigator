@@ -22,7 +22,7 @@ export default function CategoryFilter() {
             }
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-semibold transition-all ${
               active
-                ? 'bg-purple-600 text-white shadow-sm'
+                ? 'bg-brand-700 text-white shadow-sm'
                 : 'text-gray-600 hover:bg-gray-100'
             }`}
           >

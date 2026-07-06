@@ -9,16 +9,27 @@ import type { User } from '@supabase/supabase-js'
 import RatingSheet from '../Ratings/RatingSheet'
 import AuthSheet from '../Auth/AuthSheet'
 
+// Lettered map pins (WC / Rx / H / R) — the Claude Design map look
+const PIN_LABEL: Record<string, string> = {
+  toilet:     'WC',
+  pharmacy:   'Rx',
+  hospital:   'H',
+  restaurant: 'R',
+}
+
+const PIN_COLOUR: Record<string, string> = {
+  toilet:     '#15803d', // green
+  pharmacy:   '#7c3aed', // purple
+  hospital:   '#2563eb', // blue
+  restaurant: '#c2410c', // amber-brown
+}
+
+// Small emoji still used inside the popup header
 const EMOJI: Record<string, string> = {
   toilet:     '🚻',
   pharmacy:   '💊',
+  hospital:   '🏥',
   restaurant: '🍽️',
-}
-
-const BORDER_COLOUR: Record<string, string> = {
-  toilet:     '#6c3fc5',
-  pharmacy:   '#0ea5e9',
-  restaurant: '#f97316',
 }
 
 // For venues with toilets=yes, show the actual venue type — not "Public Toilet"
@@ -79,22 +90,30 @@ function isVenueToilet(place: Place): boolean {
   return place.category === 'toilet' && !!place.placeType && place.placeType in VENUE_TOILET_SHORT
 }
 
-function createIcon(category: string, isCommunity: boolean, borderOverride?: string) {
-  const border = borderOverride ?? BORDER_COLOUR[category] ?? '#6c3fc5'
-  const emoji  = EMOJI[category] ?? '📍'
-  // Community markers: dashed border + 👤 badge
-  const style = isCommunity
-    ? `border:2.5px dashed ${border};`
-    : `border:2.5px solid ${border};`
-  const badge = isCommunity
-    ? `<span style="position:absolute;top:-4px;right:-4px;font-size:9px;background:white;border-radius:50%;padding:1px">👤</span>`
+// SVG teardrop pin with a category letter. `hollow` (venue toilets) draws a
+// white pin with coloured outline; community places get a small "C" badge.
+function createIcon(category: string, isCommunity: boolean, hollow: boolean) {
+  const colour = PIN_COLOUR[category] ?? '#0f766e'
+  const label = PIN_LABEL[category] ?? '•'
+  const fill = hollow ? '#ffffff' : colour
+  const textColour = hollow ? colour : '#ffffff'
+  const commBadge = isCommunity
+    ? `<circle cx="26.5" cy="8" r="7" fill="#ffffff" stroke="${colour}" stroke-width="1.5"/>` +
+      `<text x="26.5" y="11.2" text-anchor="middle" font-size="9" font-weight="700" fill="${colour}" font-family="ui-sans-serif,system-ui,sans-serif">C</text>`
     : ''
+  const html =
+    `<svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg">` +
+    `<path d="M17 1.5 C8.7 1.5 2 8.2 2 16.5 C2 26 17 42.5 17 42.5 C17 42.5 32 26 32 16.5 C32 8.2 25.3 1.5 17 1.5 Z" ` +
+    `fill="${fill}" stroke="${colour}" stroke-width="2.5"/>` +
+    `<text x="17" y="21.5" text-anchor="middle" font-size="12" font-weight="700" fill="${textColour}" font-family="ui-sans-serif,system-ui,sans-serif">${label}</text>` +
+    commBadge +
+    `</svg>`
   return L.divIcon({
-    html: `<div class="place-marker" style="${style}position:relative">${emoji}${badge}</div>`,
-    className: '',
-    iconSize: [36, 36],
-    iconAnchor: [18, 18],
-    popupAnchor: [0, -22],
+    html,
+    className: 'ibd-pin',
+    iconSize: [34, 44],
+    iconAnchor: [17, 43],
+    popupAnchor: [0, -40],
   })
 }
 
@@ -119,18 +138,16 @@ export default function PlaceMarker({ place, userLocation, user, isBookmarked, i
 
   const isCommunity = place.source === 'community'
   const venueToilet = isVenueToilet(place)
-  // Walk-in public toilets get a green pin so the eye lands on the safe bets first;
-  // venue toilets keep the standard purple — informative, not alarming.
-  const borderOverride =
-    place.category === 'toilet' ? (venueToilet ? undefined : '#16a34a') : undefined
-  const icon = createIcon(place.category, isCommunity, borderOverride)
+  // Venue toilets draw as a hollow pin; walk-in public toilets are solid —
+  // the eye lands on the safe bets first.
+  const icon = createIcon(place.category, isCommunity, venueToilet)
   const dist = userLocation
     ? haversine(userLocation.lat, userLocation.lon, place.lat, place.lon)
     : null
   const openStatus = isOpenNow(place.openingHours)
   const status = STATUS[openStatus]
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}&travelmode=walking`
-  const accentColour = BORDER_COLOUR[place.category] ?? '#6c3fc5'
+  const accentColour = PIN_COLOUR[place.category] ?? '#0f766e'
 
   return (
     <>
@@ -141,7 +158,7 @@ export default function PlaceMarker({ place, userLocation, user, isBookmarked, i
             <p className="ibd-card-category" style={{ color: accentColour }}>
               {EMOJI[place.category]} {getPlaceLabel(place.category, place.placeType).toUpperCase()}
               {isCommunity && (
-                <span className="ml-2 text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full">
+                <span className="ml-2 text-[9px] font-bold bg-brand-100 text-brand-800 px-1.5 py-0.5 rounded-full">
                   👤 COMMUNITY
                 </span>
               )}
@@ -191,7 +208,7 @@ export default function PlaceMarker({ place, userLocation, user, isBookmarked, i
                   href="https://www.iwa.ie/faq/where-can-i-get-the-universal-key-for-accessible-toilets/"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-600 font-semibold underline"
+                  className="text-brand-700 font-semibold underline"
                 >
                   Get one
                 </a>

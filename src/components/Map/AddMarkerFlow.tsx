@@ -111,7 +111,7 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
                   onClick={() => setCategory(value)}
                   className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                     category === value
-                      ? 'bg-purple-600 text-white'
+                      ? 'bg-brand-700 text-white'
                       : 'bg-gray-100 text-gray-600'
                   }`}
                 >
@@ -127,7 +127,7 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-purple-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-brand-500"
             />
 
             {/* Toggles */}
@@ -153,7 +153,7 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-bold text-sm disabled:opacity-60"
+              className="w-full py-3.5 rounded-xl bg-brand-700 text-white font-bold text-sm disabled:opacity-60"
             >
               {saving ? 'Saving…' : 'Add to Map'}
             </button>

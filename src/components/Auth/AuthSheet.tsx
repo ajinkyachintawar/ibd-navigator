@@ -70,12 +70,12 @@ export default function AuthSheet({ onClose }: Props) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && signInWithEmail()}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-purple-400"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm mb-3 outline-none focus:border-brand-500"
             />
             <button
               onClick={signInWithEmail}
               disabled={loading || !email}
-              className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-bold text-sm disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-brand-700 text-white font-bold text-sm disabled:opacity-50"
             >
               {loading ? 'Sending…' : 'Send magic link'}
             </button>

@@ -40,7 +40,7 @@ export default function BookmarksPanel({ bookmarks, onClose, onNavigate, onRemov
                 <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => onNavigate(b)}
-                    className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1.5 rounded-lg"
+                    className="text-xs font-semibold text-brand-700 bg-brand-50 px-3 py-1.5 rounded-lg"
                   >
                     Go
                   </button>

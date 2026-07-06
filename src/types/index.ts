@@ -1,4 +1,4 @@
-export type Category = 'toilet' | 'pharmacy' | 'restaurant'
+export type Category = 'toilet' | 'pharmacy' | 'restaurant' | 'hospital'
 
 export type OpenStatus = 'open' | 'closed' | 'unknown'
 

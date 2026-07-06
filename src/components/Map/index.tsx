@@ -3,10 +3,13 @@ import 'react-leaflet-cluster/dist/assets/MarkerCluster.css'
 import 'react-leaflet-cluster/dist/assets/MarkerCluster.Default.css'
 import L from 'leaflet'
 import { useState, useEffect } from 'react'
-import { MapContainer, TileLayer } from 'react-leaflet'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useAppContext } from '../../context/AppContext'
 import { useGeolocation, IRELAND_CENTRE } from '../../hooks/useGeolocation'
+import { useDarkMode } from '../../hooks/useDarkMode'
+import SearchBar from '../Search/SearchBar'
+import type { UserLocation } from '../../types'
 import { usePlaces } from '../../hooks/usePlaces'
 import { useCommunityPlaces } from '../../hooks/useCommunityPlaces'
 import { useAuth } from '../../hooks/useAuth'
@@ -29,12 +32,14 @@ import type { Category } from '../../types'
 const CLUSTER_COLOUR: Record<Category, string> = {
   toilet:     '#15803d',
   pharmacy:   '#7c3aed',
+  hospital:   '#2563eb',
   restaurant: '#c2410c',
 }
 
 const CLUSTER_LABEL: Record<Category, string> = {
   toilet:     'WC',
   pharmacy:   'Rx',
+  hospital:   'H',
   restaurant: 'R',
 }
 
@@ -53,10 +58,25 @@ function makeClusterIcon(category: Category) {
   }
 }
 
+// Flies the map to a searched location whenever it changes.
+function FlyTo({ target }: { target: UserLocation | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (target) map.flyTo([target.lat, target.lon], 14, { animate: true, duration: 1.0 })
+  }, [map, target])
+  return null
+}
+
 export default function MapView() {
   const { state, dispatch } = useAppContext()
   const { location, error, loading } = useGeolocation()
   const { user } = useAuth()
+  const { dark, toggle: toggleDark } = useDarkMode()
+
+  // Search overrides GPS as the point we fetch/centre around, until cleared.
+  const [searchLoc, setSearchLoc] = useState<UserLocation | null>(null)
+  const [searchLabel, setSearchLabel] = useState<string | null>(null)
+  const activeLocation = searchLoc ?? location
 
   // Flare mode overrides at render time — never mutates the user's stored filters,
   // so exiting flare restores their previous category/range for free.
@@ -64,12 +84,12 @@ export default function MapView() {
   const effectiveRange = state.flareMode ? 500 : state.range
 
   const { data: places = [], isFetching, isError } = usePlaces(
-    effectiveCategory, effectiveRange, location
+    effectiveCategory, effectiveRange, activeLocation
   )
   const { data: communityPlaces = [], refetch: refetchCommunity } = useCommunityPlaces(
-    effectiveCategory, effectiveRange, location
+    effectiveCategory, effectiveRange, activeLocation
   )
-  const { data: ibdSet } = useIbdFriendly(effectiveRange, location)
+  const { data: ibdSet } = useIbdFriendly(effectiveRange, activeLocation)
 
   const { bookmarks, isBookmarked, toggleBookmark } = useBookmarks(user)
   const [showCantWait, setShowCantWait] = useState(false)
@@ -113,16 +133,27 @@ export default function MapView() {
             </button>
           </div>
         ) : (
-          <div className="pointer-events-auto w-full flex flex-col items-center gap-2">
-            <button
-              onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
-              className="bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow active:scale-95 transition-transform"
-            >
-              🩸 Flare mode
-            </button>
+          <div className="pointer-events-auto w-full bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-3 flex flex-col gap-2.5">
+            <SearchBar
+              onResult={(loc, label) => { setSearchLoc(loc); setSearchLabel(label) }}
+              activeLabel={searchLabel}
+              onClear={() => { setSearchLoc(null); setSearchLabel(null) }}
+              dark={dark}
+              onToggleDark={toggleDark}
+            />
             <CategoryFilter />
-            <RangeSelector />
-            <OpenNowToggle />
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <RangeSelector />
+              <div className="flex items-center gap-2">
+                <OpenNowToggle />
+                <button
+                  onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
+                  className="bg-brand-red text-white text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform"
+                >
+                  🩸 Flare
+                </button>
+              </div>
+            </div>
           </div>
         )}
         {isFetching && (
@@ -175,6 +206,7 @@ export default function MapView() {
             <LocationMarker location={location} />
           </>
         )}
+        <FlyTo target={searchLoc} />
 
         <MarkerClusterGroup
           chunkedLoading
@@ -185,7 +217,7 @@ export default function MapView() {
             <PlaceMarker
               key={place.id}
               place={place}
-              userLocation={location}
+              userLocation={activeLocation}
               user={user}
               isBookmarked={isBookmarked(place)}
               isIbdFriendly={ibdSet?.has(ibdKeyForPlace(place)) ?? false}

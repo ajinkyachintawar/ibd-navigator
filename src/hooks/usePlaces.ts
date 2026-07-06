@@ -36,6 +36,18 @@ out center;
     `.trim()
   }
 
+  if (category === 'hospital') {
+    // Hospitals + clinics — mapped as nodes and (often large) ways
+    return `
+[out:json][timeout:15];
+(
+  node["amenity"~"^(hospital|clinic)$"](${around});
+  way["amenity"~"^(hospital|clinic)$"](${around});
+);
+out center;
+    `.trim()
+  }
+
   // Pharmacy and restaurant: straightforward amenity tag
   const amenity = category === 'pharmacy' ? 'pharmacy' : 'restaurant'
   return `[out:json][timeout:10];node["amenity"="${amenity}"](${around});out body;`

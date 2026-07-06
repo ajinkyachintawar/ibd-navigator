@@ -12,23 +12,28 @@ export default function RangeSelector() {
   const { state, dispatch } = useAppContext()
 
   return (
-    <div className="flex gap-1.5 bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg p-1.5">
-      {RANGES.map(({ value, label }) => {
-        const active = state.range === value
-        return (
-          <button
-            key={value}
-            onClick={() => dispatch({ type: 'SET_RANGE', range: value })}
-            className={`px-3 py-1 rounded-xl text-xs font-semibold transition-all ${
-              active
-                ? 'bg-brand-700 text-white shadow-sm'
-                : 'text-gray-500 hover:bg-gray-100'
-            }`}
-          >
-            {label}
-          </button>
-        )
-      })}
+    <div className="flex items-center gap-2">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        Within
+      </span>
+      <div className="flex gap-1">
+        {RANGES.map(({ value, label }) => {
+          const active = state.range === value
+          return (
+            <button
+              key={value}
+              onClick={() => dispatch({ type: 'SET_RANGE', range: value })}
+              className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                active
+                  ? 'bg-brand-700 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'
+              }`}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

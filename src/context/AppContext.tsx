@@ -1,10 +1,10 @@
 import { createContext, useContext, useReducer } from 'react'
 import type { ReactNode } from 'react'
-import type { AppState, Category, RangeMetres } from '../types'
+import type { AppState, CategorySelection, RangeMetres } from '../types'
 
 type Action =
   | { type: 'SET_LOCATION'; lat: number; lon: number }
-  | { type: 'SET_CATEGORY'; category: Category | null }
+  | { type: 'SET_CATEGORY'; category: CategorySelection | null }
   | { type: 'SET_RANGE'; range: RangeMetres }
   | { type: 'TOGGLE_OPEN_NOW' }
   | { type: 'TOGGLE_CANT_WAIT' }
@@ -12,7 +12,7 @@ type Action =
 
 const initial: AppState = {
   userLocation: null,
-  activeCategory: null,
+  activeCategory: 'all',
   range: 1000,
   openNowOnly: false,
   showCantWait: false,

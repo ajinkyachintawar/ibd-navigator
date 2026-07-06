@@ -7,10 +7,11 @@ interface Props {
   onClear: () => void
   dark: boolean
   onToggleDark: () => void
+  hideToggle?: boolean
 }
 
 // Geocodes a town/address to a point via OSM Nominatim (Ireland-scoped, free).
-export default function SearchBar({ onResult, activeLabel, onClear, dark, onToggleDark }: Props) {
+export default function SearchBar({ onResult, activeLabel, onClear, dark, onToggleDark, hideToggle }: Props) {
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
   const [notFound, setNotFound] = useState(false)
@@ -46,7 +47,7 @@ export default function SearchBar({ onResult, activeLabel, onClear, dark, onTogg
   return (
     <div className="flex flex-col gap-1">
       <form onSubmit={submit} className="flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-2 min-w-0">
+        <div className="flex-1 flex items-center gap-2 bg-white/95 dark:bg-gray-900/90 backdrop-blur shadow-lg rounded-full px-3 py-2.5 min-w-0">
           <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
           <input
             value={q}
@@ -64,14 +65,16 @@ export default function SearchBar({ onResult, activeLabel, onClear, dark, onTogg
             </button>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onToggleDark}
-          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-          className="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-300 flex items-center justify-center"
-        >
-          {dark ? '☀' : '☾'}
-        </button>
+        {!hideToggle && (
+          <button
+            type="button"
+            onClick={onToggleDark}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="flex-shrink-0 w-11 h-11 rounded-full bg-white/95 dark:bg-gray-900/90 backdrop-blur shadow-lg text-gray-500 dark:text-gray-300 flex items-center justify-center"
+          >
+            {dark ? '☀' : '☾'}
+          </button>
+        )}
       </form>
       {notFound && (
         <p className="text-[11px] text-amber-600 px-3">No match in Ireland — try a town or full address.</p>

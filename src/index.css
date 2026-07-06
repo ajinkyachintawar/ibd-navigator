@@ -25,6 +25,11 @@ body {
   z-index: 0;
 }
 
+/* Dark map: match tile background so there's no white flash while loading */
+.dark .leaflet-container {
+  background: #0e1116;
+}
+
 /* User location blue pulse dot */
 .user-dot {
   width: 20px;

@@ -27,7 +27,7 @@ import AuthSheet from '../Auth/AuthSheet'
 import BookmarksPanel from '../Bookmarks/BookmarksPanel'
 import { useBookmarks } from '../../hooks/useBookmarks'
 import { useIbdFriendly, ibdKeyForPlace } from '../../hooks/useIbdFriendly'
-import type { Category } from '../../types'
+import type { Category, Place } from '../../types'
 
 const CLUSTER_COLOUR: Record<Category, string> = {
   toilet:     '#15803d',
@@ -42,6 +42,8 @@ const CLUSTER_LABEL: Record<Category, string> = {
   hospital:   'H',
   restaurant: 'R',
 }
+
+const CATEGORIES: Category[] = ['toilet', 'pharmacy', 'hospital', 'restaurant']
 
 function makeClusterIcon(category: Category) {
   const colour = CLUSTER_COLOUR[category]
@@ -80,14 +82,20 @@ export default function MapView() {
 
   // Flare mode overrides at render time — never mutates the user's stored filters,
   // so exiting flare restores their previous category/range for free.
-  const effectiveCategory = state.flareMode ? 'toilet' : state.activeCategory
+  const selection = state.flareMode ? 'toilet' : state.activeCategory // CategorySelection | null
   const effectiveRange = state.flareMode ? 500 : state.range
+  const show = (c: Category) => selection === 'all' || selection === c
 
-  const { data: places = [], isFetching, isError } = usePlaces(
-    effectiveCategory, effectiveRange, activeLocation
-  )
+  // One query per category so "All" can show every type at once; each stays
+  // disabled (and free) when its category isn't selected.
+  const catQueries: Record<Category, ReturnType<typeof usePlaces>> = {
+    toilet:     usePlaces(show('toilet') ? 'toilet' : null, effectiveRange, activeLocation),
+    pharmacy:   usePlaces(show('pharmacy') ? 'pharmacy' : null, effectiveRange, activeLocation),
+    hospital:   usePlaces(show('hospital') ? 'hospital' : null, effectiveRange, activeLocation),
+    restaurant: usePlaces(show('restaurant') ? 'restaurant' : null, effectiveRange, activeLocation),
+  }
   const { data: communityPlaces = [], refetch: refetchCommunity } = useCommunityPlaces(
-    effectiveCategory, effectiveRange, activeLocation
+    selection, effectiveRange, activeLocation
   )
   const { data: ibdSet } = useIbdFriendly(effectiveRange, activeLocation)
 
@@ -99,26 +107,87 @@ export default function MapView() {
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
-  const clusterIcon = effectiveCategory ? makeClusterIcon(effectiveCategory) : undefined
 
-  // Merge OSM + community places, apply Open Now filter
-  const allPlaces = [...places, ...communityPlaces]
-  const filteredPlaces = state.openNowOnly
-    ? allPlaces.filter(p => isOpenNow(p.openingHours) !== 'closed')
-    : allPlaces
+  // Merge OSM + community per category, apply Open Now filter
+  const openNowOk = (p: Place) => !state.openNowOnly || isOpenNow(p.openingHours) !== 'closed'
+  const placesByCat = {} as Record<Category, Place[]>
+  let totalRaw = 0
+  let totalShown = 0
+  for (const c of CATEGORIES) {
+    const merged = [...(catQueries[c].data ?? []), ...communityPlaces.filter(p => p.category === c)]
+    totalRaw += merged.length
+    placesByCat[c] = merged.filter(openNowOk)
+    totalShown += placesByCat[c].length
+  }
+  const isFetching = CATEGORIES.some(c => catQueries[c].isFetching)
+  const isError = CATEGORIES.some(c => catQueries[c].isError) && totalRaw === 0
 
   // Auto-revert Open Now if it empties all results
   useEffect(() => {
-    if (state.openNowOnly && !isFetching && allPlaces.length > 0 && filteredPlaces.length === 0) {
+    if (state.openNowOnly && !isFetching && totalRaw > 0 && totalShown === 0) {
       dispatch({ type: 'TOGGLE_OPEN_NOW' })
     }
-  }, [state.openNowOnly, isFetching, allPlaces.length, filteredPlaces.length, dispatch])
+  }, [state.openNowOnly, isFetching, totalRaw, totalShown, dispatch])
 
   return (
     <div className="relative h-full w-full">
 
-      {/* Floating controls — Searching lives here so it's always centred below the stack */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] flex flex-col items-center gap-2 w-full max-w-sm px-4 pointer-events-none">
+      {/* Desktop left sidebar (lg+) */}
+      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-80 z-[1000] bg-white dark:bg-gray-900 shadow-xl p-4 gap-4 overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-lg bg-brand-700 flex items-center justify-center text-white text-sm font-bold">◐</span>
+            <span className="font-bold text-gray-800 dark:text-gray-100">IBD Navigator</span>
+          </div>
+          <button
+            onClick={toggleDark}
+            aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300"
+          >
+            {dark ? '☀' : '☾'}
+          </button>
+        </div>
+
+        <SearchBar
+          onResult={(loc, label) => { setSearchLoc(loc); setSearchLabel(label) }}
+          activeLabel={searchLabel}
+          onClear={() => { setSearchLoc(null); setSearchLabel(null) }}
+          dark={dark}
+          onToggleDark={toggleDark}
+          hideToggle
+        />
+
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Amenities</p>
+          <CategoryFilter />
+        </div>
+        <div>
+          <RangeSelector />
+        </div>
+        <OpenNowToggle />
+
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex flex-col gap-1">
+          {[
+            { label: 'No-Wait Card', icon: 'ID', color: '#0f766e', onClick: () => setShowCantWait(true) },
+            { label: 'Saved places', icon: '🔖', color: '#7c3aed', onClick: () => setShowBookmarks(true), badge: bookmarks.length },
+            { label: 'Add a place', icon: '＋', color: '#c2410c', onClick: () => user ? setShowAddFlow(true) : setShowAuth(true) },
+            { label: 'Flare mode', icon: '🩸', color: '#2563eb', onClick: () => dispatch({ type: 'TOGGLE_FLARE' }) },
+          ].map(({ label, icon, color, onClick, badge }) => (
+            <button key={label} onClick={onClick} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
+              <span className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: color }}>{icon}</span>
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
+              {badge ? <span className="ml-auto text-xs font-bold text-brand-700">{badge}</span> : null}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-3">
+          <PanicButton location={location} locationDenied={locationDenied} />
+        </div>
+      </aside>
+
+      {/* Floating controls — no card; pieces float directly on the map (lg: sidebar takes over) */}
+      <div className="absolute top-4 inset-x-0 z-[1000] flex flex-col items-stretch gap-2 w-full max-w-md px-4 pointer-events-none lg:hidden">
         {state.flareMode ? (
           <div className="pointer-events-auto w-full bg-rose-600 text-white rounded-2xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
             <div className="min-w-0">
@@ -133,7 +202,7 @@ export default function MapView() {
             </button>
           </div>
         ) : (
-          <div className="pointer-events-auto w-full bg-white dark:bg-gray-900 rounded-2xl shadow-lg p-3 flex flex-col gap-2.5">
+          <div className="pointer-events-auto w-full flex flex-col gap-2">
             <SearchBar
               onResult={(loc, label) => { setSearchLoc(loc); setSearchLabel(label) }}
               activeLabel={searchLabel}
@@ -142,27 +211,19 @@ export default function MapView() {
               onToggleDark={toggleDark}
             />
             <CategoryFilter />
-            <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
               <RangeSelector />
-              <div className="flex items-center gap-2">
-                <OpenNowToggle />
-                <button
-                  onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
-                  className="bg-brand-red text-white text-xs font-bold px-3 py-1 rounded-full active:scale-95 transition-transform"
-                >
-                  🩸 Flare
-                </button>
-              </div>
+              <OpenNowToggle />
             </div>
           </div>
         )}
         {isFetching && (
-          <div className="pointer-events-none bg-white/90 text-brand-700 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
+          <div className="self-center pointer-events-none bg-white/90 dark:bg-gray-900/90 text-brand-700 dark:text-brand-200 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
             Searching…
           </div>
         )}
         {loading && (
-          <div className="pointer-events-none bg-white/90 text-gray-600 text-xs font-medium px-3 py-1.5 rounded-full shadow">
+          <div className="self-center pointer-events-none bg-white/90 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-full shadow">
             📡 Getting your location…
           </div>
         )}
@@ -182,13 +243,6 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Open Now reverted toast */}
-      {state.openNowOnly === false && !isFetching && places.length > 0 && filteredPlaces.length === 0 && (
-        <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-gray-800 text-white text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
-          No open places found — showing all results
-        </div>
-      )}
-
       <MapContainer
         center={[IRELAND_CENTRE.lat, IRELAND_CENTRE.lon]}
         zoom={7}
@@ -196,8 +250,13 @@ export default function MapView() {
         zoomControl={false}
       >
         <TileLayer
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          key={dark ? 'dark' : 'light'}
+          attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url={
+            dark
+              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+              : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+          }
         />
 
         {location && (
@@ -208,23 +267,28 @@ export default function MapView() {
         )}
         <FlyTo target={searchLoc} />
 
-        <MarkerClusterGroup
-          chunkedLoading
-          maxClusterRadius={50}
-          iconCreateFunction={clusterIcon}
-        >
-          {filteredPlaces.map((place) => (
-            <PlaceMarker
-              key={place.id}
-              place={place}
-              userLocation={activeLocation}
-              user={user}
-              isBookmarked={isBookmarked(place)}
-              isIbdFriendly={ibdSet?.has(ibdKeyForPlace(place)) ?? false}
-              onBookmark={toggleBookmark}
-            />
-          ))}
-        </MarkerClusterGroup>
+        {CATEGORIES.map((c) =>
+          placesByCat[c].length > 0 ? (
+            <MarkerClusterGroup
+              key={c}
+              chunkedLoading
+              maxClusterRadius={50}
+              iconCreateFunction={makeClusterIcon(c)}
+            >
+              {placesByCat[c].map((place) => (
+                <PlaceMarker
+                  key={place.id}
+                  place={place}
+                  userLocation={activeLocation}
+                  user={user}
+                  isBookmarked={isBookmarked(place)}
+                  isIbdFriendly={ibdSet?.has(ibdKeyForPlace(place)) ?? false}
+                  onBookmark={toggleBookmark}
+                />
+              ))}
+            </MarkerClusterGroup>
+          ) : null
+        )}
 
         {/* Add marker draggable pin — inside MapContainer so it has map context */}
         {showAddFlow && user && location && (
@@ -245,45 +309,57 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Bottom action bar */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[500] w-full max-w-md px-3">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-2 flex items-center gap-1.5">
-          <div className="flex-1 min-w-0">
-            <PanicButton location={location} locationDenied={locationDenied} />
-          </div>
+      {/* SOS floating action button — bottom right, above the bar */}
+      <div className="fixed bottom-24 right-4 z-[600] lg:hidden">
+        <PanicButton location={location} locationDenied={locationDenied} variant="fab" />
+      </div>
 
+      {/* Bottom action bar — 4 colour-coded tiles (No-Wait / Saved / Add / Flare) */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[500] w-full max-w-md px-3 lg:hidden">
+        <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur rounded-2xl shadow-xl px-2 py-2 flex items-center justify-around">
           <button
-            onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
-            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-brand-800 dark:text-brand-200 hover:bg-brand-50 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Add a place"
+            onClick={() => setShowCantWait(true)}
+            className="flex flex-col items-center gap-1 px-3 py-1"
+            aria-label="Show No-Wait card"
           >
-            <span className="text-lg leading-none">＋</span>
-            <span className="text-[10px] font-semibold">Add</span>
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#0f766e' }}>ID</span>
+            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">No-Wait</span>
           </button>
 
           <button
             onClick={() => setShowBookmarks(true)}
-            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-brand-800 dark:text-brand-200 hover:bg-brand-50 dark:hover:bg-gray-800 transition-colors relative"
+            className="flex flex-col items-center gap-1 px-3 py-1 relative"
             aria-label="Saved places"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
-            </svg>
-            <span className="text-[10px] font-semibold">Saved</span>
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ background: '#7c3aed' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
+              </svg>
+            </span>
+            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Saved</span>
             {bookmarks.length > 0 && (
-              <span className="absolute top-0 right-0 w-4 h-4 bg-brand-700 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute top-0 right-1.5 w-4 h-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center">
                 {bookmarks.length > 9 ? '9+' : bookmarks.length}
               </span>
             )}
           </button>
 
           <button
-            onClick={() => setShowCantWait(true)}
-            className="flex-shrink-0 flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            aria-label="Show No Wait card"
+            onClick={() => user ? setShowAddFlow(true) : setShowAuth(true)}
+            className="flex flex-col items-center gap-1 px-3 py-1"
+            aria-label="Add a place"
           >
-            <span className="text-lg leading-none">🪪</span>
-            <span className="text-[10px] font-semibold">No-Wait</span>
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl font-bold leading-none" style={{ background: '#c2410c' }}>＋</span>
+            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Add place</span>
+          </button>
+
+          <button
+            onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
+            className="flex flex-col items-center gap-1 px-3 py-1"
+            aria-label="Flare mode"
+          >
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: state.flareMode ? '#e74c3c' : '#2563eb' }}>🩸</span>
+            <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Flare</span>
           </button>
         </div>
       </div>

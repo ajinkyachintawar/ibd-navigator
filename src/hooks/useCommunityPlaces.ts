@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { Category, Place, RangeMetres, UserLocation } from '../types'
+import type { Category, CategorySelection, Place, RangeMetres, UserLocation } from '../types'
 
 // Ireland bounding box — reject markers outside this
 const IRELAND_BBOX = { minLat: 51.3, maxLat: 55.4, minLon: -10.7, maxLon: -5.4 }
@@ -13,20 +13,21 @@ export function isWithinIreland(lat: number, lon: number) {
 }
 
 async function fetchCommunityPlaces(
-  category: Category,
+  category: CategorySelection,
   range: RangeMetres,
   loc: UserLocation
 ): Promise<Place[]> {
   // Rough bounding box from centre + range (1 degree lat ≈ 111km)
   const delta = range / 111_000
-  const { data, error } = await supabase
+  let query = supabase
     .from('markers')
     .select('*')
-    .eq('category', category)
     .gte('lat', loc.lat - delta)
     .lte('lat', loc.lat + delta)
     .gte('lon', loc.lon - delta)
     .lte('lon', loc.lon + delta)
+  if (category !== 'all') query = query.eq('category', category)
+  const { data, error } = await query
 
   if (error) throw error
 
@@ -46,7 +47,7 @@ async function fetchCommunityPlaces(
 }
 
 export function useCommunityPlaces(
-  category: Category | null,
+  category: CategorySelection | null,
   range: RangeMetres,
   location: UserLocation | null
 ) {

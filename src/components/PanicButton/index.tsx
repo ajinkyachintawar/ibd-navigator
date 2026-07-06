@@ -73,9 +73,10 @@ async function fetchToilets(radius: RangeMetres, loc: UserLocation): Promise<Pla
 interface Props {
   location: UserLocation | null
   locationDenied: boolean
+  variant?: 'pill' | 'fab'
 }
 
-export default function PanicButton({ location, locationDenied }: Props) {
+export default function PanicButton({ location, locationDenied, variant = 'pill' }: Props) {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
@@ -116,6 +117,36 @@ export default function PanicButton({ location, locationDenied }: Props) {
     )
   }
 
+  const bg = { background: loading ? '#c0392b' : '#e74c3c', boxShadow: '0 6px 22px rgba(231,76,60,0.6)' }
+
+  if (variant === 'fab') {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        {status && (
+          <div className="bg-black/70 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap max-w-[60vw] text-center">
+            {status}
+          </div>
+        )}
+        <button
+          onClick={handlePanic}
+          disabled={loading}
+          aria-label="SOS — find nearest toilet now"
+          className="w-20 h-20 rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70"
+          style={bg}
+        >
+          {loading ? (
+            <span className="inline-block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <>
+              <span className="text-lg font-extrabold tracking-wide">SOS</span>
+              <span className="text-[10px] font-bold mt-0.5">FIND WC</span>
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col items-center gap-2">
       {status && (
@@ -129,10 +160,7 @@ export default function PanicButton({ location, locationDenied }: Props) {
         disabled={loading}
         aria-label="Find nearest toilet now"
         className="flex items-center gap-2 px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
-        style={{
-          background: loading ? '#c0392b' : '#e74c3c',
-          boxShadow: '0 4px 20px rgba(231,76,60,0.55)',
-        }}
+        style={bg}
       >
         {loading ? (
           <>

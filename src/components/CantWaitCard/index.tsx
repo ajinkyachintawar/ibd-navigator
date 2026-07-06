@@ -73,7 +73,7 @@ export default function NoWaitCard({ onClose }: Props) {
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex flex-col justify-end sm:justify-center sm:items-center bg-black/60 backdrop-blur-sm">
       <div
-        className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl bg-gray-900 text-white p-5 flex flex-col gap-4 max-h-[92vh] overflow-y-auto"
+        className="w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl bg-white text-gray-900 dark:bg-gray-900 dark:text-white p-5 flex flex-col gap-4 max-h-[92vh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
         aria-label="No-Wait Card — show to staff"
@@ -84,7 +84,7 @@ export default function NoWaitCard({ onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-300"
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300"
           >
             ✕
           </button>
@@ -97,7 +97,7 @@ export default function NoWaitCard({ onClose }: Props) {
         >
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-brand-100">IBD Passport</p>
-            <h3 className="text-2xl font-bold mt-1">{displayName}</h3>
+            <h3 className="text-2xl font-bold mt-1 text-white">{displayName}</h3>
             <p className="text-sm text-brand-100 mt-0.5">Urgent restroom access · Crohn's &amp; Colitis</p>
           </div>
           <div className="flex items-end justify-between">
@@ -108,18 +108,18 @@ export default function NoWaitCard({ onClose }: Props) {
           </div>
         </div>
 
-        <p className="text-sm text-gray-300 leading-relaxed">
+        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
           Show this card to staff at participating locations to request immediate restroom access, no questions asked.
         </p>
 
         {/* Multilingual emergency phrase — for use with strangers/staff who need it spelled out */}
-        <div className="rounded-xl bg-gray-800 p-4">
+        <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-4">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Show this message</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Show this message</p>
             <select
               value={lang}
               onChange={(e) => handleLang(e.target.value)}
-              className="rounded-lg px-2 py-1 text-xs font-semibold bg-gray-700 text-white"
+              className="rounded-lg px-2 py-1 text-xs font-semibold bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               aria-label="Select language"
             >
               {Object.entries(TRANSLATIONS).map(([k, v]) => (
@@ -134,9 +134,9 @@ export default function NoWaitCard({ onClose }: Props) {
 
         {/* Get official card / already have it */}
         {hasCard ? (
-          <div className="flex items-center justify-between rounded-xl bg-gray-800 px-4 py-3">
+          <div className="flex items-center justify-between rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-3">
             <span className="text-sm font-semibold">💳 Official card on file</span>
-            <button onClick={() => markHasCard(false)} className="text-xs text-gray-400 underline">remove</button>
+            <button onClick={() => markHasCard(false)} className="text-xs text-gray-500 dark:text-gray-400 underline">remove</button>
           </div>
         ) : (
           <div className="flex gap-2">
@@ -150,7 +150,7 @@ export default function NoWaitCard({ onClose }: Props) {
             </a>
             <button
               onClick={() => markHasCard(true)}
-              className="flex-1 text-center text-xs font-bold py-2.5 rounded-xl bg-gray-800 text-gray-200"
+              className="flex-1 text-center text-xs font-bold py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200"
             >
               I already have it ✓
             </button>

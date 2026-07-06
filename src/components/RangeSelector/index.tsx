@@ -12,7 +12,7 @@ export default function RangeSelector() {
   const { state, dispatch } = useAppContext()
 
   return (
-    <div className="flex items-center gap-2 bg-white/85 dark:bg-gray-900/70 backdrop-blur rounded-full px-3 py-1.5 shadow-sm">
+    <div className="flex items-center gap-2 bg-white/85 dark:bg-gray-900/70 backdrop-blur rounded-full px-3 py-1.5 shadow-sm flex-shrink-0 whitespace-nowrap">
       <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
         Within
       </span>

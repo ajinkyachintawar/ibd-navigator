@@ -211,7 +211,7 @@ export default function MapView() {
               onToggleDark={toggleDark}
             />
             <CategoryFilter />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
               <RangeSelector />
               <OpenNowToggle />
             </div>

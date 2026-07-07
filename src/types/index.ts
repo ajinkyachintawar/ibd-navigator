@@ -1,4 +1,4 @@
-export type Category = 'toilet' | 'pharmacy' | 'restaurant'
+export type Category = 'toilet' | 'pharmacy' | 'restaurant' | 'hospital'
 
 export type OpenStatus = 'open' | 'closed' | 'unknown'
 
@@ -29,9 +29,8 @@ export type RangeMetres = 500 | 1000 | 2000 | 5000
 
 export interface AppState {
   userLocation: UserLocation | null
-  activeCategory: Category | null
+  selectedTypes: Category[]
   range: RangeMetres
   openNowOnly: boolean
   showCantWait: boolean
-  flareMode: boolean
 }

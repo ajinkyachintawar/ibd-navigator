@@ -75,7 +75,6 @@ export default function RatingSheet({ place, user, onClose }: Props) {
       <div className="fixed bottom-0 left-0 right-0 z-[7001] bg-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto">
         {done ? (
           <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
             <p className="font-bold text-gray-800">Thanks for your rating!</p>
             <p className="text-xs text-gray-500 mt-1">Helps the IBD community find better places</p>
           </div>
@@ -95,13 +94,13 @@ export default function RatingSheet({ place, user, onClose }: Props) {
                 <button
                   key={t}
                   onClick={() => setThumbs(t)}
-                  className={`flex-1 py-4 rounded-2xl text-3xl transition-all ${
+                  className={`flex-1 py-4 rounded-2xl text-sm font-bold transition-all ${
                     thumbs === t
-                      ? t === 'up' ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400'
-                      : 'bg-gray-100'
+                      ? t === 'up' ? 'bg-green-100 border-2 border-green-400 text-green-700' : 'bg-red-100 border-2 border-red-400 text-red-700'
+                      : 'bg-gray-100 text-gray-500'
                   }`}
                 >
-                  {t === 'up' ? '👍' : '👎'}
+                  {t === 'up' ? 'Good' : 'Poor'}
                 </button>
               ))}
             </div>
@@ -109,19 +108,19 @@ export default function RatingSheet({ place, user, onClose }: Props) {
             {/* Checkboxes */}
             <div className="flex flex-col gap-2 mb-5">
               {[
-                { label: '✨ Clean & well maintained', value: clean, set: setClean },
-                { label: '♿ Wheelchair accessible', value: accessible, set: setAccessible },
-                { label: '💜 IBD Friendly', value: ibdFriendly, set: setIbdFriendly },
+                { label: 'Clean & well maintained', value: clean, set: setClean },
+                { label: 'Wheelchair accessible', value: accessible, set: setAccessible },
+                { label: 'IBD Friendly', value: ibdFriendly, set: setIbdFriendly },
               ].map(({ label, value, set }) => (
                 <button
                   key={label}
                   onClick={() => set(!value)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all ${
-                    value ? 'bg-purple-50 border border-purple-300 text-purple-700' : 'bg-gray-50 text-gray-600'
+                    value ? 'bg-brand-50 border border-brand-200 text-brand-800' : 'bg-gray-50 text-gray-600'
                   }`}
                 >
                   <span className={`w-5 h-5 rounded flex items-center justify-center text-xs flex-shrink-0 ${
-                    value ? 'bg-purple-600 text-white' : 'bg-gray-200'
+                    value ? 'bg-brand-700 text-white' : 'bg-gray-200'
                   }`}>
                     {value ? '✓' : ''}
                   </span>
@@ -133,7 +132,7 @@ export default function RatingSheet({ place, user, onClose }: Props) {
             <button
               onClick={handleSave}
               disabled={!thumbs || saving}
-              className="w-full py-3.5 rounded-xl bg-purple-600 text-white font-bold text-sm disabled:opacity-40"
+              className="w-full py-3.5 rounded-xl bg-brand-700 text-white font-bold text-sm disabled:opacity-40"
             >
               {saving ? 'Saving…' : 'Submit Rating'}
             </button>

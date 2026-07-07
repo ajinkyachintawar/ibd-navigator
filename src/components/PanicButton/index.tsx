@@ -17,10 +17,6 @@ function round3(n: number) {
   return Math.round(n * 1000) / 1000
 }
 
-function mapsUrl(place: Place) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}&travelmode=walking`
-}
-
 function nearest(places: Place[], loc: UserLocation): Place {
   return [...places].sort(
     (a, b) =>
@@ -73,16 +69,19 @@ async function fetchToilets(radius: RangeMetres, loc: UserLocation): Promise<Pla
 interface Props {
   location: UserLocation | null
   locationDenied: boolean
+  variant?: 'pill' | 'fab'
+  size?: number // px diameter, fab variant only — default 64 (tablet rail uses 56)
+  onFound: (place: Place) => void
 }
 
-export default function PanicButton({ location, locationDenied }: Props) {
+export default function PanicButton({ location, locationDenied, variant = 'pill', size = 64, onFound }: Props) {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
 
   const handlePanic = async () => {
     if (locationDenied || !location) {
-      setStatus('⚠️ Enable location access in your browser settings')
+      setStatus('Enable location access in your browser settings')
       setTimeout(() => setStatus(null), 4000)
       return
     }
@@ -100,7 +99,7 @@ export default function PanicButton({ location, locationDenied }: Props) {
 
       if (places.length > 0) {
         const target = nearest(places, location)
-        window.open(mapsUrl(target), '_blank')
+        onFound(target)
         setStatus(null)
         setLoading(false)
         return
@@ -116,8 +115,44 @@ export default function PanicButton({ location, locationDenied }: Props) {
     )
   }
 
+  // Exact spec token: alert red oklch(0.6 0.17 25). Loading uses a darker shade of the same hue.
+  const bg = { background: loading ? '#a83c39' : '#d24c49', boxShadow: '0 6px 16px rgba(210,76,73,0.4)' }
+
+  if (variant === 'fab') {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        {status && (
+          <div className="bg-black/70 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap max-w-[60vw] text-center">
+            {status}
+          </div>
+        )}
+        <button
+          onClick={handlePanic}
+          disabled={loading}
+          aria-label="SOS — find nearest toilet now"
+          className={`rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70 ${!loading ? 'panic-pulse' : ''}`}
+          style={{ ...bg, width: size, height: size }}
+        >
+          {loading ? (
+            <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : size < 60 ? (
+            <>
+              <span className="text-xs font-extrabold tracking-wide">SOS</span>
+              <span className="text-[7px] font-bold mt-0.5">WC</span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-extrabold tracking-wide">SOS</span>
+              <span className="text-[8.5px] font-bold mt-0.5">FIND WC</span>
+            </>
+          )}
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-2 w-full">
       {status && (
         <div className="bg-black/70 text-white text-xs font-medium px-4 py-2 rounded-full whitespace-nowrap">
           {status}
@@ -127,12 +162,9 @@ export default function PanicButton({ location, locationDenied }: Props) {
       <button
         onClick={handlePanic}
         disabled={loading}
-        aria-label="Find nearest toilet now"
-        className="flex items-center gap-2 px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
-        style={{
-          background: loading ? '#c0392b' : '#e74c3c',
-          boxShadow: '0 4px 20px rgba(231,76,60,0.55)',
-        }}
+        aria-label="SOS — find nearest restroom"
+        className={`flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap ${!loading ? 'panic-pulse' : ''}`}
+        style={bg}
       >
         {loading ? (
           <>
@@ -140,7 +172,7 @@ export default function PanicButton({ location, locationDenied }: Props) {
             Searching…
           </>
         ) : (
-          <>🚨 Find Nearest Toilet</>
+          <>SOS — Find nearest restroom</>
         )}
       </button>
     </div>

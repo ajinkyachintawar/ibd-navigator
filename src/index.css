@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide scrollbar on horizontal chip rows */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* SOS pulse — exact match to the design spec's panicPulse: a tight box-shadow
+   ring right on the button itself, not a separate scaling element. */
+@keyframes panicPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(213, 87, 83, 0.45); }
+  70%  { box-shadow: 0 0 0 16px rgba(213, 87, 83, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(213, 87, 83, 0); }
+}
+.panic-pulse {
+  animation: panicPulse 2.4s infinite;
+}
+
+/* Detail sheets / panels sliding up from the bottom */
+@keyframes sheetUp {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* Toasts / backdrops fading in */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
 /* Prevent iOS bounce scroll interfering with map gestures */
 html,
 body {
@@ -21,6 +48,11 @@ body {
   z-index: 0;
 }
 
+/* Dark map: match tile background so there's no white flash while loading */
+.dark .leaflet-container {
+  background: #0e1116;
+}
+
 /* User location blue pulse dot */
 .user-dot {
   width: 20px;
@@ -38,133 +70,15 @@ body {
   100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
 }
 
-/* Category place markers */
-.place-marker {
-  width: 36px;
-  height: 36px;
-  background: white;
-  border: 2.5px solid #6c3fc5;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-  transition: transform 0.15s;
+/* Lettered teardrop pins (WC / Rx / H / R) */
+.ibd-pin svg {
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+  transition: transform 0.15s ease;
+  transform-origin: 50% 100%;
 }
 
-.place-marker:hover {
-  transform: scale(1.15);
-}
-
-/* ── Leaflet popup shell overrides ─────────────────────────── */
-.ibd-popup .leaflet-popup-content-wrapper {
-  padding: 0;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
-  overflow: hidden;
-}
-
-.ibd-popup .leaflet-popup-content {
-  margin: 0;
-  width: 100% !important;
-}
-
-.ibd-popup .leaflet-popup-tip-container {
-  margin-top: -1px;
-}
-
-/* ── Card layout ────────────────────────────────────────────── */
-.ibd-card {
-  padding: 18px 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-}
-
-.ibd-card-category {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  margin: 0;
-}
-
-.ibd-card-name {
-  font-size: 20px;
-  font-weight: 800;
-  color: #111827;
-  margin: 0;
-  line-height: 1.2;
-}
-
-/* Walking time row — single flex line, both items nowrap */
-.ibd-card-distance {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 4px 0 2px;
-  flex-wrap: nowrap;
-}
-
-.ibd-card-time {
-  font-size: 32px;
-  font-weight: 800;
-  color: #1d4ed8;
-  line-height: 1;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.ibd-card-dist {
-  font-size: 16px;
-  font-weight: 600;
-  color: #6b7280;
-  white-space: nowrap;   /* prevents "596" and "m" splitting across lines */
-  flex-shrink: 0;
-}
-
-/* Status + badges */
-.ibd-card-meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 2px 0 6px;
-}
-
-.ibd-card-status {
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.ibd-card-badge {
-  font-size: 12px;
-  background: #f3f4f6;
-  color: #374151;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-/* Directions button */
-.ibd-card-btn {
-  display: block;
-  text-align: center;
-  color: #fff !important;
-  font-size: 15px;
-  font-weight: 700;
-  padding: 12px 16px;
-  border-radius: 12px;
-  text-decoration: none !important;
-  margin-top: 4px;
-  transition: opacity 0.15s, transform 0.1s;
-}
-
-.ibd-card-btn:hover {
-  opacity: 0.92;
-  transform: translateY(-1px);
+.ibd-pin:hover svg {
+  transform: scale(1.12);
 }
 
 /* Custom cluster icon — category-coloured, emoji + count */

@@ -12,17 +12,14 @@ export function isWithinIreland(lat: number, lon: number) {
   )
 }
 
-async function fetchCommunityPlaces(
-  category: Category,
-  range: RangeMetres,
-  loc: UserLocation
-): Promise<Place[]> {
+// Always fetches every category within range — per-category filtering (based on
+// which types are selected) happens client-side alongside the OSM results.
+async function fetchCommunityPlaces(range: RangeMetres, loc: UserLocation): Promise<Place[]> {
   // Rough bounding box from centre + range (1 degree lat ≈ 111km)
   const delta = range / 111_000
   const { data, error } = await supabase
     .from('markers')
     .select('*')
-    .eq('category', category)
     .gte('lat', loc.lat - delta)
     .lte('lat', loc.lat + delta)
     .gte('lon', loc.lon - delta)
@@ -45,15 +42,11 @@ async function fetchCommunityPlaces(
   }))
 }
 
-export function useCommunityPlaces(
-  category: Category | null,
-  range: RangeMetres,
-  location: UserLocation | null
-) {
+export function useCommunityPlaces(range: RangeMetres, location: UserLocation | null) {
   return useQuery({
-    queryKey: ['community-places', category, range, location?.lat, location?.lon],
-    queryFn: () => fetchCommunityPlaces(category!, range, location!),
-    enabled: !!category && !!location,
+    queryKey: ['community-places', range, location?.lat, location?.lon],
+    queryFn: () => fetchCommunityPlaces(range, location!),
+    enabled: !!location,
     staleTime: 60_000,
     retry: false,
   })

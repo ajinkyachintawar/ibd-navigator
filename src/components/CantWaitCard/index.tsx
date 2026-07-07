@@ -135,7 +135,7 @@ export default function NoWaitCard({ onClose }: Props) {
         {/* Get official card / already have it */}
         {hasCard ? (
           <div className="flex items-center justify-between rounded-xl bg-gray-100 dark:bg-gray-800 px-4 py-3">
-            <span className="text-sm font-semibold">💳 Official card on file</span>
+            <span className="text-sm font-semibold">Official card on file</span>
             <button onClick={() => markHasCard(false)} className="text-xs text-gray-500 dark:text-gray-400 underline">remove</button>
           </div>
         ) : (

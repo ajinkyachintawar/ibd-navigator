@@ -1,21 +1,29 @@
 import { useAppContext } from '../../context/AppContext'
-import type { CategorySelection } from '../../types'
+import { PIN_COLOUR } from '../Map/placeMeta'
+import type { Category } from '../../types'
 
-const ITEMS: { value: CategorySelection; label: string; color: string }[] = [
-  { value: 'all',        label: 'All',         color: '#0f766e' },
-  { value: 'toilet',     label: 'Toilets',     color: '#15803d' },
-  { value: 'pharmacy',   label: 'Pharmacies',  color: '#7c3aed' },
-  { value: 'hospital',   label: 'Hospitals',   color: '#2563eb' },
-  { value: 'restaurant', label: 'Restaurants', color: '#c2410c' },
+const ITEMS: { value: Category | 'all'; label: string; color: string }[] = [
+  { value: 'all',        label: 'All',         color: '#005c4a' },
+  { value: 'toilet',     label: 'Toilets',     color: PIN_COLOUR.toilet },
+  { value: 'pharmacy',   label: 'Pharmacies',  color: PIN_COLOUR.pharmacy },
+  { value: 'hospital',   label: 'Hospitals',   color: PIN_COLOUR.hospital },
+  { value: 'restaurant', label: 'Restaurants', color: PIN_COLOUR.restaurant },
 ]
 
-export default function CategoryFilter() {
+interface Props {
+  // Sidebar has vertical room to spare — wrap chips onto multiple lines there
+  // instead of horizontally scrolling a single row like the floating overlays do.
+  wrap?: boolean
+}
+
+export default function CategoryFilter({ wrap = false }: Props) {
   const { state, dispatch } = useAppContext()
+  const allActive = state.selectedTypes.length === 4
 
   return (
-    <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 py-0.5">
+    <div className={wrap ? 'flex flex-wrap gap-2' : 'flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 py-0.5'}>
       {ITEMS.map(({ value, label, color }) => {
-        const active = state.activeCategory === value
+        const active = value === 'all' ? allActive : state.selectedTypes.includes(value)
         return (
           <button
             key={value}

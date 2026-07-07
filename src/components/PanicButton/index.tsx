@@ -17,10 +17,6 @@ function round3(n: number) {
   return Math.round(n * 1000) / 1000
 }
 
-function mapsUrl(place: Place) {
-  return `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lon}&travelmode=walking`
-}
-
 function nearest(places: Place[], loc: UserLocation): Place {
   return [...places].sort(
     (a, b) =>
@@ -74,16 +70,18 @@ interface Props {
   location: UserLocation | null
   locationDenied: boolean
   variant?: 'pill' | 'fab'
+  size?: number // px diameter, fab variant only — default 64 (tablet rail uses 56)
+  onFound: (place: Place) => void
 }
 
-export default function PanicButton({ location, locationDenied, variant = 'pill' }: Props) {
+export default function PanicButton({ location, locationDenied, variant = 'pill', size = 64, onFound }: Props) {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const queryClient = useQueryClient()
 
   const handlePanic = async () => {
     if (locationDenied || !location) {
-      setStatus('⚠️ Enable location access in your browser settings')
+      setStatus('Enable location access in your browser settings')
       setTimeout(() => setStatus(null), 4000)
       return
     }
@@ -101,7 +99,7 @@ export default function PanicButton({ location, locationDenied, variant = 'pill'
 
       if (places.length > 0) {
         const target = nearest(places, location)
-        window.open(mapsUrl(target), '_blank')
+        onFound(target)
         setStatus(null)
         setLoading(false)
         return
@@ -117,7 +115,8 @@ export default function PanicButton({ location, locationDenied, variant = 'pill'
     )
   }
 
-  const bg = { background: loading ? '#c0392b' : '#e74c3c', boxShadow: '0 6px 22px rgba(231,76,60,0.6)' }
+  // Exact spec token: alert red oklch(0.6 0.17 25). Loading uses a darker shade of the same hue.
+  const bg = { background: loading ? '#a83c39' : '#d24c49', boxShadow: '0 6px 16px rgba(210,76,73,0.4)' }
 
   if (variant === 'fab') {
     return (
@@ -127,30 +126,27 @@ export default function PanicButton({ location, locationDenied, variant = 'pill'
             {status}
           </div>
         )}
-        <div className="relative w-20 h-20">
-          {!loading && (
+        <button
+          onClick={handlePanic}
+          disabled={loading}
+          aria-label="SOS — find nearest toilet now"
+          className={`rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70 ${!loading ? 'panic-pulse' : ''}`}
+          style={{ ...bg, width: size, height: size }}
+        >
+          {loading ? (
+            <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : size < 60 ? (
             <>
-              <span className="sos-ring" />
-              <span className="sos-ring sos-ring-delay" />
+              <span className="text-xs font-extrabold tracking-wide">SOS</span>
+              <span className="text-[7px] font-bold mt-0.5">WC</span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-extrabold tracking-wide">SOS</span>
+              <span className="text-[8.5px] font-bold mt-0.5">FIND WC</span>
             </>
           )}
-          <button
-            onClick={handlePanic}
-            disabled={loading}
-            aria-label="SOS — find nearest toilet now"
-            className="relative z-10 w-20 h-20 rounded-full text-white flex flex-col items-center justify-center leading-none transition-transform active:scale-95 disabled:opacity-70"
-            style={bg}
-          >
-            {loading ? (
-              <span className="inline-block w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                <span className="text-lg font-extrabold tracking-wide">SOS</span>
-                <span className="text-[10px] font-bold mt-0.5">FIND WC</span>
-              </>
-            )}
-          </button>
-        </div>
+        </button>
       </div>
     )
   }
@@ -163,30 +159,22 @@ export default function PanicButton({ location, locationDenied, variant = 'pill'
         </div>
       )}
 
-      <div className="relative w-full">
-        {!loading && (
+      <button
+        onClick={handlePanic}
+        disabled={loading}
+        aria-label="SOS — find nearest restroom"
+        className={`flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap ${!loading ? 'panic-pulse' : ''}`}
+        style={bg}
+      >
+        {loading ? (
           <>
-            <span className="sos-ring" />
-            <span className="sos-ring sos-ring-delay" />
+            <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            Searching…
           </>
+        ) : (
+          <>SOS — Find nearest restroom</>
         )}
-        <button
-          onClick={handlePanic}
-          disabled={loading}
-          aria-label="SOS — find nearest restroom"
-          className="relative z-10 flex items-center justify-center gap-2 w-full px-6 py-3.5 rounded-full text-white font-bold text-sm shadow-lg transition-transform active:scale-95 disabled:opacity-70 whitespace-nowrap"
-          style={bg}
-        >
-          {loading ? (
-            <>
-              <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Searching…
-            </>
-          ) : (
-            <>SOS — Find nearest restroom</>
-          )}
-        </button>
-      </div>
+      </button>
     </div>
   )
 }

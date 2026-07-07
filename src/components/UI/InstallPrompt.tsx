@@ -38,7 +38,7 @@ export default function InstallPrompt() {
 
   return (
     <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[2000] w-[calc(100%-2rem)] max-w-sm bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
-      <div className="text-2xl flex-shrink-0">🧭</div>
+      <div className="w-8 h-8 rounded-lg bg-brand-700 flex-shrink-0" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-gray-800">Add IBD Navigator</p>
         <p className="text-xs text-gray-500">Install for offline access & faster loading</p>

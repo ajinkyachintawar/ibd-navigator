@@ -27,14 +27,10 @@ export interface UserLocation {
 
 export type RangeMetres = 500 | 1000 | 2000 | 5000
 
-// 'all' shows every category at once (the default map view)
-export type CategorySelection = Category | 'all'
-
 export interface AppState {
   userLocation: UserLocation | null
-  activeCategory: CategorySelection | null
+  selectedTypes: Category[]
   range: RangeMetres
   openNowOnly: boolean
   showCantWait: boolean
-  flareMode: boolean
 }

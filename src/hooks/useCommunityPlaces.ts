@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
-import type { Category, CategorySelection, Place, RangeMetres, UserLocation } from '../types'
+import type { Category, Place, RangeMetres, UserLocation } from '../types'
 
 // Ireland bounding box — reject markers outside this
 const IRELAND_BBOX = { minLat: 51.3, maxLat: 55.4, minLon: -10.7, maxLon: -5.4 }
@@ -12,22 +12,18 @@ export function isWithinIreland(lat: number, lon: number) {
   )
 }
 
-async function fetchCommunityPlaces(
-  category: CategorySelection,
-  range: RangeMetres,
-  loc: UserLocation
-): Promise<Place[]> {
+// Always fetches every category within range — per-category filtering (based on
+// which types are selected) happens client-side alongside the OSM results.
+async function fetchCommunityPlaces(range: RangeMetres, loc: UserLocation): Promise<Place[]> {
   // Rough bounding box from centre + range (1 degree lat ≈ 111km)
   const delta = range / 111_000
-  let query = supabase
+  const { data, error } = await supabase
     .from('markers')
     .select('*')
     .gte('lat', loc.lat - delta)
     .lte('lat', loc.lat + delta)
     .gte('lon', loc.lon - delta)
     .lte('lon', loc.lon + delta)
-  if (category !== 'all') query = query.eq('category', category)
-  const { data, error } = await query
 
   if (error) throw error
 
@@ -46,15 +42,11 @@ async function fetchCommunityPlaces(
   }))
 }
 
-export function useCommunityPlaces(
-  category: CategorySelection | null,
-  range: RangeMetres,
-  location: UserLocation | null
-) {
+export function useCommunityPlaces(range: RangeMetres, location: UserLocation | null) {
   return useQuery({
-    queryKey: ['community-places', category, range, location?.lat, location?.lon],
-    queryFn: () => fetchCommunityPlaces(category!, range, location!),
-    enabled: !!category && !!location,
+    queryKey: ['community-places', range, location?.lat, location?.lon],
+    queryFn: () => fetchCommunityPlaces(range, location!),
+    enabled: !!location,
     staleTime: 60_000,
     retry: false,
   })

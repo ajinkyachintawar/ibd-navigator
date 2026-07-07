@@ -4,7 +4,7 @@ import { useFlareLog, type FlareSeverity } from '../../hooks/useFlareLog'
 
 interface Props {
   onClose: () => void
-  onQuickFlareMode: () => void
+  onSaved: () => void
 }
 
 const SEVERITIES: { value: FlareSeverity; label: string; color: string }[] = [
@@ -15,7 +15,7 @@ const SEVERITIES: { value: FlareSeverity; label: string; color: string }[] = [
 
 const SEVERITY_LOOKUP = Object.fromEntries(SEVERITIES.map((s) => [s.value, s]))
 
-export default function FlareLogSheet({ onClose, onQuickFlareMode }: Props) {
+export default function FlareLogSheet({ onClose, onSaved }: Props) {
   const { entries, addEntry } = useFlareLog()
   const [severity, setSeverity] = useState<FlareSeverity>('mild')
   const [note, setNote] = useState('')
@@ -23,12 +23,14 @@ export default function FlareLogSheet({ onClose, onQuickFlareMode }: Props) {
   const handleSave = () => {
     addEntry(severity, note)
     setNote('')
+    onSaved()
   }
 
   return createPortal(
     <>
       <div className="fixed inset-0 bg-black/30 z-[6000]" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 z-[6001] bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-t-2xl shadow-2xl max-w-lg mx-auto max-h-[85vh] flex flex-col">
+      <div className="fixed bottom-0 left-0 right-0 z-[6001] bg-white dark:bg-gray-900 text-gray-900 dark:text-white rounded-t-2xl shadow-2xl max-w-lg mx-auto max-h-[85vh] flex flex-col
+                       md:inset-0 md:m-auto md:w-[410px] md:max-w-none md:h-fit md:rounded-2xl">
         <div className="flex items-center justify-between px-6 pt-5 pb-3 flex-shrink-0">
           <h2 className="text-lg font-bold">Flare log</h2>
           <button onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300">✕</button>
@@ -64,22 +66,16 @@ export default function FlareLogSheet({ onClose, onQuickFlareMode }: Props) {
 
           <button
             onClick={handleSave}
-            className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm mb-3"
+            className="w-full py-3.5 rounded-xl bg-blue-600 text-white font-bold text-sm mb-6"
           >
             Save entry
-          </button>
-
-          <button
-            onClick={onQuickFlareMode}
-            className="w-full py-2.5 rounded-xl bg-brand-red/10 text-brand-red font-semibold text-xs mb-6"
-          >
-            🚨 Quick: show nearest toilets only (500m)
           </button>
 
           {entries.length > 0 && (
             <>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Recent entries</p>
-              <ul className="flex flex-col gap-2">
+              {/* Shows 5 rows before scrolling kicks in */}
+              <ul className="flex flex-col gap-2 max-h-[224px] overflow-y-auto">
                 {entries.slice(0, 20).map((e) => {
                   const s = SEVERITY_LOOKUP[e.severity]
                   return (

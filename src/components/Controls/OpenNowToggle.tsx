@@ -3,8 +3,6 @@ import { useAppContext } from '../../context/AppContext'
 export default function OpenNowToggle() {
   const { state, dispatch } = useAppContext()
 
-  if (!state.activeCategory) return null
-
   return (
     <button
       onClick={() => dispatch({ type: 'TOGGLE_OPEN_NOW' })}
@@ -15,7 +13,7 @@ export default function OpenNowToggle() {
       }`}
       aria-pressed={state.openNowOnly}
     >
-      🕐 Open Now
+      Open Now
     </button>
   )
 }

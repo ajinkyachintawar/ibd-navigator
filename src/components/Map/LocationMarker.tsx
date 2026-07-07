@@ -13,7 +13,7 @@ export default function LocationMarker({ location }: { location: UserLocation })
   return (
     <Marker position={[location.lat, location.lon]} icon={userIcon}>
       <Popup>
-        <p className="text-sm font-semibold text-gray-700">📍 You are here</p>
+        <p className="text-sm font-semibold text-gray-700">You are here</p>
       </Popup>
     </Marker>
   )

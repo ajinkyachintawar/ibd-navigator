@@ -17,7 +17,12 @@ import { isOpenNow } from '../../utils/isOpenNow'
 import FlyToUser from './FlyToUser'
 import LocationMarker from './LocationMarker'
 import PlaceMarker from './PlaceMarker'
+import PlaceDetailSheet from './PlaceDetailSheet'
 import AddMarkerFlow from './AddMarkerFlow'
+import RatingSheet from '../Ratings/RatingSheet'
+import PanicCard from '../PanicButton/PanicCard'
+import Toast from '../Toast'
+import { useToast } from '../../hooks/useToast'
 import CategoryFilter from '../CategoryFilter'
 import RangeSelector from '../RangeSelector'
 import OpenNowToggle from '../Controls/OpenNowToggle'
@@ -28,14 +33,11 @@ import BookmarksPanel from '../Bookmarks/BookmarksPanel'
 import FlareLogSheet from '../FlareLog/FlareLogSheet'
 import { useBookmarks } from '../../hooks/useBookmarks'
 import { useIbdFriendly, ibdKeyForPlace } from '../../hooks/useIbdFriendly'
+import { haversine } from '../../utils/haversine'
+import { PIN_COLOUR } from './placeMeta'
 import type { Category, Place } from '../../types'
 
-const CLUSTER_COLOUR: Record<Category, string> = {
-  toilet:     '#15803d',
-  pharmacy:   '#7c3aed',
-  hospital:   '#2563eb',
-  restaurant: '#c2410c',
-}
+const CLUSTER_COLOUR = PIN_COLOUR as Record<Category, string>
 
 const CLUSTER_LABEL: Record<Category, string> = {
   toilet:     'WC',
@@ -89,24 +91,21 @@ export default function MapView() {
   const [searchLabel, setSearchLabel] = useState<string | null>(null)
   const activeLocation = searchLoc ?? location
 
-  // Flare mode overrides at render time — never mutates the user's stored filters,
-  // so exiting flare restores their previous category/range for free.
-  const selection = state.flareMode ? 'toilet' : state.activeCategory // CategorySelection | null
-  const effectiveRange = state.flareMode ? 500 : state.range
-  const show = (c: Category) => selection === 'all' || selection === c
+  const activeTypes: Category[] = state.selectedTypes
+  const activeRange = state.range
 
-  // One query per category so "All" can show every type at once; each stays
+  // One query per category so multiple types can show at once; each stays
   // disabled (and free) when its category isn't selected.
   const catQueries: Record<Category, ReturnType<typeof usePlaces>> = {
-    toilet:     usePlaces(show('toilet') ? 'toilet' : null, effectiveRange, activeLocation),
-    pharmacy:   usePlaces(show('pharmacy') ? 'pharmacy' : null, effectiveRange, activeLocation),
-    hospital:   usePlaces(show('hospital') ? 'hospital' : null, effectiveRange, activeLocation),
-    restaurant: usePlaces(show('restaurant') ? 'restaurant' : null, effectiveRange, activeLocation),
+    toilet:     usePlaces(activeTypes.includes('toilet') ? 'toilet' : null, activeRange, activeLocation),
+    pharmacy:   usePlaces(activeTypes.includes('pharmacy') ? 'pharmacy' : null, activeRange, activeLocation),
+    hospital:   usePlaces(activeTypes.includes('hospital') ? 'hospital' : null, activeRange, activeLocation),
+    restaurant: usePlaces(activeTypes.includes('restaurant') ? 'restaurant' : null, activeRange, activeLocation),
   }
   const { data: communityPlaces = [], refetch: refetchCommunity } = useCommunityPlaces(
-    selection, effectiveRange, activeLocation
+    activeRange, activeLocation
   )
-  const { data: ibdSet } = useIbdFriendly(effectiveRange, activeLocation)
+  const { data: ibdSet } = useIbdFriendly(activeRange, activeLocation)
 
   const { bookmarks, isBookmarked, toggleBookmark } = useBookmarks(user)
   const [showCantWait, setShowCantWait] = useState(false)
@@ -114,6 +113,10 @@ export default function MapView() {
   const [showAuth, setShowAuth] = useState(false)
   const [showBookmarks, setShowBookmarks] = useState(false)
   const [showFlareLog, setShowFlareLog] = useState(false)
+  const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null)
+  const [showRating, setShowRating] = useState(false)
+  const [panicResult, setPanicResult] = useState<Place | null>(null)
+  const { message: toastMessage, showToast } = useToast()
 
   const hasGps = !!location && error !== 'location-denied'
   const locationDenied = error === 'location-denied'
@@ -124,13 +127,26 @@ export default function MapView() {
   let totalRaw = 0
   let totalShown = 0
   for (const c of CATEGORIES) {
+    if (!activeTypes.includes(c)) { placesByCat[c] = []; continue }
     const merged = [...(catQueries[c].data ?? []), ...communityPlaces.filter(p => p.category === c)]
     totalRaw += merged.length
     placesByCat[c] = merged.filter(openNowOk)
     totalShown += placesByCat[c].length
   }
-  const isFetching = CATEGORIES.some(c => catQueries[c].isFetching)
-  const isError = CATEGORIES.some(c => catQueries[c].isError) && totalRaw === 0
+  const isFetching = activeTypes.some(c => catQueries[c].isFetching)
+  const isError = activeTypes.some(c => catQueries[c].isError) && totalRaw === 0
+
+  const selectedPlace = selectedPlaceId
+    ? CATEGORIES.flatMap(c => placesByCat[c]).find(p => p.id === selectedPlaceId) ?? null
+    : null
+  const selectedDistance = selectedPlace && activeLocation
+    ? haversine(activeLocation.lat, activeLocation.lon, selectedPlace.lat, selectedPlace.lon)
+    : null
+  // Panic escalation fetches around raw GPS `location` (not the search override),
+  // so distance here matches what was actually searched.
+  const panicDistance = panicResult && location
+    ? haversine(location.lat, location.lon, panicResult.lat, panicResult.lon)
+    : null
 
   // Auto-revert Open Now if it empties all results
   useEffect(() => {
@@ -139,11 +155,21 @@ export default function MapView() {
     }
   }, [state.openNowOnly, isFetching, totalRaw, totalShown, dispatch])
 
+  // Shared across the desktop sidebar list and the tablet icon rail
+  const navItems = [
+    { label: 'No-Wait Card', icon: 'ID', color: '#005c4a', radius: '8px', onClick: () => setShowCantWait(true) },
+    { label: 'Saved places', icon: String(bookmarks.length), color: PIN_COLOUR.pharmacy, radius: '50% 50% 50% 6px', onClick: () => setShowBookmarks(true) },
+    { label: 'Add a place', icon: '＋', color: PIN_COLOUR.restaurant, radius: '8px', onClick: () => user ? setShowAddFlow(true) : setShowAuth(true) },
+    { label: 'Flare log', icon: 'Rx', color: PIN_COLOUR.hospital, radius: '8px', onClick: () => setShowFlareLog(true) },
+  ]
+
   return (
     <div className="relative h-full w-full">
 
+      <Toast message={toastMessage} />
+
       {/* Desktop left sidebar (lg+) */}
-      <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-80 z-[1000] bg-white dark:bg-gray-900 shadow-xl p-4 gap-4 overflow-y-auto">
+      <aside className="hidden xl:flex flex-col fixed left-0 top-0 bottom-0 w-80 z-[1000] bg-white dark:bg-gray-900 shadow-xl p-4 gap-4 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-lg bg-brand-700 flex items-center justify-center text-white text-sm font-bold">◐</span>
@@ -169,7 +195,7 @@ export default function MapView() {
 
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-2">Amenities</p>
-          <CategoryFilter />
+          <CategoryFilter wrap />
         </div>
         <div>
           <RangeSelector />
@@ -177,56 +203,81 @@ export default function MapView() {
         <OpenNowToggle />
 
         <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex flex-col gap-1">
-          {[
-            { label: 'No-Wait Card', icon: 'ID', color: '#0f766e', onClick: () => setShowCantWait(true) },
-            { label: 'Saved places', icon: '🔖', color: '#7c3aed', onClick: () => setShowBookmarks(true), badge: bookmarks.length },
-            { label: 'Add a place', icon: '＋', color: '#c2410c', onClick: () => user ? setShowAddFlow(true) : setShowAuth(true) },
-            { label: 'Flare log', icon: '📝', color: '#2563eb', onClick: () => setShowFlareLog(true) },
-          ].map(({ label, icon, color, onClick, badge }) => (
+          {navItems.map(({ label, icon, color, radius, onClick }) => (
             <button key={label} onClick={onClick} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left">
-              <span className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0" style={{ background: color }}>{icon}</span>
+              <span
+                className="w-8 h-8 flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0"
+                style={{ background: color, borderRadius: radius }}
+              >
+                {icon}
+              </span>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
-              {badge ? <span className="ml-auto text-xs font-bold text-brand-700">{badge}</span> : null}
             </button>
           ))}
         </div>
 
         <div className="mt-auto pt-3">
-          <PanicButton location={location} locationDenied={locationDenied} />
+          <PanicButton
+            location={location}
+            locationDenied={locationDenied}
+            onFound={(p) => { setPanicResult(p); setSelectedPlaceId(null) }}
+          />
         </div>
       </aside>
 
-      {/* Floating controls — no card; pieces float directly on the map (lg: sidebar takes over) */}
-      <div className="absolute top-4 inset-x-0 z-[1000] flex flex-col items-stretch gap-2 w-full max-w-md px-4 pointer-events-none lg:hidden">
-        {state.flareMode ? (
-          <div className="pointer-events-auto w-full bg-rose-600 text-white rounded-2xl shadow-lg px-4 py-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-bold leading-tight">Flare mode</p>
-              <p className="text-[11px] text-rose-100 leading-tight">Nearest toilets within 500m only</p>
-            </div>
-            <button
-              onClick={() => dispatch({ type: 'TOGGLE_FLARE' })}
-              className="flex-shrink-0 bg-white text-rose-600 text-xs font-bold px-3 py-2 rounded-full active:scale-95 transition-transform"
-            >
-              Exit
-            </button>
+      {/* Tablet icon rail (md–lg): same nav items as the sidebar, icon-only, no labels */}
+      <aside className="hidden md:flex xl:hidden flex-col items-center fixed left-0 top-0 bottom-0 w-[76px] z-[1000] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 py-5 gap-2.5">
+        <span className="w-[30px] h-[30px] rounded-[9px] bg-brand-700 flex-shrink-0" />
+        <button
+          onClick={toggleDark}
+          aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+          className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-300 mt-1.5"
+        >
+          {dark ? '☀' : '☾'}
+        </button>
+
+        <div className="h-px w-8 bg-gray-100 dark:bg-gray-800 my-2" />
+
+        {navItems.map(({ label, icon, color, radius, onClick }) => (
+          <button
+            key={label}
+            onClick={onClick}
+            aria-label={label}
+            className="w-[46px] h-[46px] flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0"
+            style={{ background: color, borderRadius: radius }}
+          >
+            {icon}
+          </button>
+        ))}
+
+        <div className="flex-1" />
+
+        <PanicButton
+          location={location}
+          locationDenied={locationDenied}
+          variant="fab"
+          size={56}
+          onFound={(p) => { setPanicResult(p); setSelectedPlaceId(null) }}
+        />
+      </aside>
+
+      {/* Floating controls — no card; pieces float directly on the map. Shifts right of the
+          tablet rail at md, hidden entirely at lg where the sidebar takes over. */}
+      <div className="absolute top-4 inset-x-0 md:left-24 z-[1000] flex flex-col items-stretch gap-2 w-full md:w-auto max-w-md md:max-w-none px-4 pointer-events-none xl:hidden">
+        <div className="pointer-events-auto w-full flex flex-col gap-2">
+          <SearchBar
+            onResult={(loc, label) => { setSearchLoc(loc); setSearchLabel(label) }}
+            activeLabel={searchLabel}
+            onClear={() => { setSearchLoc(null); setSearchLabel(null) }}
+            dark={dark}
+            onToggleDark={toggleDark}
+          />
+          <CategoryFilter />
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+            <RangeSelector />
+            <OpenNowToggle />
           </div>
-        ) : (
-          <div className="pointer-events-auto w-full flex flex-col gap-2">
-            <SearchBar
-              onResult={(loc, label) => { setSearchLoc(loc); setSearchLabel(label) }}
-              activeLabel={searchLabel}
-              onClear={() => { setSearchLoc(null); setSearchLabel(null) }}
-              dark={dark}
-              onToggleDark={toggleDark}
-            />
-            <CategoryFilter />
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-              <RangeSelector />
-              <OpenNowToggle />
-            </div>
-          </div>
-        )}
+        </div>
         {isFetching && (
           <div className="self-center pointer-events-none bg-white/90 dark:bg-gray-900/90 text-brand-700 dark:text-brand-200 text-xs font-semibold px-3 py-1.5 rounded-full shadow animate-pulse">
             Searching…
@@ -234,22 +285,22 @@ export default function MapView() {
         )}
         {loading && (
           <div className="self-center pointer-events-none bg-white/90 dark:bg-gray-900/90 text-gray-600 dark:text-gray-300 text-xs font-medium px-3 py-1.5 rounded-full shadow">
-            📡 Getting your location…
+            Getting your location…
           </div>
         )}
       </div>
 
-      {/* Location denied */}
-      {locationDenied && (
+      {/* Location denied — sits below the detail sheet so an open sheet takes priority */}
+      {locationDenied && !selectedPlace && !panicResult && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium px-4 py-2 rounded-full shadow whitespace-nowrap">
-          ⚠️ Location access denied — showing all of Ireland
+          Location access denied — showing all of Ireland
         </div>
       )}
 
       {/* All endpoints failed */}
-      {isError && !isFetching && (
+      {isError && !isFetching && !selectedPlace && !panicResult && (
         <div className="absolute bottom-24 left-1/2 -translate-x-1/2 z-[1000] bg-red-50 border border-red-200 text-red-700 text-sm font-medium px-5 py-2.5 rounded-full shadow whitespace-nowrap">
-          ⚠️ Couldn't load places — check connection and try again
+          Couldn't load places — check connection and try again
         </div>
       )}
 
@@ -290,11 +341,8 @@ export default function MapView() {
                 <PlaceMarker
                   key={place.id}
                   place={place}
-                  userLocation={activeLocation}
-                  user={user}
-                  isBookmarked={isBookmarked(place)}
-                  isIbdFriendly={ibdSet?.has(ibdKeyForPlace(place)) ?? false}
-                  onBookmark={toggleBookmark}
+                  isSelected={selectedPlaceId === place.id}
+                  onSelect={(p) => { setSelectedPlaceId(p.id); setPanicResult(null) }}
                 />
               ))}
             </MarkerClusterGroup>
@@ -307,7 +355,7 @@ export default function MapView() {
             user={user}
             userLocation={location}
             onClose={() => setShowAddFlow(false)}
-            onAdded={() => refetchCommunity()}
+            onAdded={() => { refetchCommunity(); showToast('Added! Pending community review.') }}
           />
         )}
       </MapContainer>
@@ -323,10 +371,15 @@ export default function MapView() {
       {/* Bottom action bar + SOS FAB — grouped in one container so the FAB stays
           anchored to the bar's own right edge, not the viewport's (they used to
           drift apart on wider phones since the bar is centred with max-w-md). */}
-      <div className="fixed bottom-4 inset-x-0 z-[500] w-full max-w-md mx-auto px-3 lg:hidden">
+      <div className="fixed bottom-4 inset-x-0 z-[500] w-full max-w-md mx-auto px-3 md:hidden">
         <div className="relative">
           <div className="absolute right-0 bottom-full mb-3">
-            <PanicButton location={location} locationDenied={locationDenied} variant="fab" />
+            <PanicButton
+              location={location}
+              locationDenied={locationDenied}
+              variant="fab"
+              onFound={(p) => { setPanicResult(p); setSelectedPlaceId(null) }}
+            />
           </div>
 
           <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur rounded-2xl shadow-xl px-2 py-2 flex items-center justify-around">
@@ -335,7 +388,7 @@ export default function MapView() {
               className="flex flex-col items-center gap-1 px-3 py-1"
               aria-label="Show No-Wait card"
             >
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#0f766e' }}>ID</span>
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold" style={{ background: '#005c4a' }}>ID</span>
               <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">No-Wait</span>
             </button>
 
@@ -344,17 +397,13 @@ export default function MapView() {
               className="flex flex-col items-center gap-1 px-3 py-1 relative"
               aria-label="Saved places"
             >
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white" style={{ background: '#7c3aed' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M6 2h12a1 1 0 0 1 1 1v18l-7-4-7 4V3a1 1 0 0 1 1-1Z" />
-                </svg>
+              <span
+                className="w-9 h-9 flex items-center justify-center text-white text-sm font-extrabold"
+                style={{ background: PIN_COLOUR.pharmacy, borderRadius: '50% 50% 50% 6px' }}
+              >
+                {bookmarks.length}
               </span>
               <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Saved</span>
-              {bookmarks.length > 0 && (
-                <span className="absolute top-0 right-1.5 w-4 h-4 bg-brand-red text-white text-[9px] font-bold rounded-full flex items-center justify-center">
-                  {bookmarks.length > 9 ? '9+' : bookmarks.length}
-                </span>
-              )}
             </button>
 
             <button
@@ -362,7 +411,7 @@ export default function MapView() {
               className="flex flex-col items-center gap-1 px-3 py-1"
               aria-label="Add a place"
             >
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl font-bold leading-none" style={{ background: '#c2410c' }}>＋</span>
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xl font-bold leading-none" style={{ background: PIN_COLOUR.restaurant }}>＋</span>
               <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Add place</span>
             </button>
 
@@ -371,7 +420,7 @@ export default function MapView() {
               className="flex flex-col items-center gap-1 px-3 py-1"
               aria-label="Flare log"
             >
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-base" style={{ background: '#2563eb' }}>📝</span>
+              <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-extrabold" style={{ background: PIN_COLOUR.hospital }}>Rx</span>
               <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-300">Flare log</span>
             </button>
           </div>
@@ -395,7 +444,31 @@ export default function MapView() {
       {showFlareLog && (
         <FlareLogSheet
           onClose={() => setShowFlareLog(false)}
-          onQuickFlareMode={() => { dispatch({ type: 'TOGGLE_FLARE' }); setShowFlareLog(false) }}
+          onSaved={() => showToast('Flare logged')}
+        />
+      )}
+
+      {selectedPlace && (
+        <PlaceDetailSheet
+          place={selectedPlace}
+          distance={selectedDistance}
+          isCommunity={selectedPlace.source === 'community'}
+          isIbdFriendly={ibdSet?.has(ibdKeyForPlace(selectedPlace)) ?? false}
+          isBookmarked={isBookmarked(selectedPlace)}
+          onClose={() => setSelectedPlaceId(null)}
+          onBookmarkToggle={() => toggleBookmark(selectedPlace)}
+          onRate={() => user ? setShowRating(true) : setShowAuth(true)}
+        />
+      )}
+      {showRating && user && selectedPlace && (
+        <RatingSheet place={selectedPlace} user={user} onClose={() => setShowRating(false)} />
+      )}
+
+      {panicResult && (
+        <PanicCard
+          place={panicResult}
+          distance={panicDistance}
+          onCancel={() => setPanicResult(null)}
         />
       )}
     </div>

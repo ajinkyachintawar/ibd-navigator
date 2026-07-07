@@ -75,7 +75,6 @@ export default function RatingSheet({ place, user, onClose }: Props) {
       <div className="fixed bottom-0 left-0 right-0 z-[7001] bg-white rounded-t-2xl shadow-2xl p-6 max-w-lg mx-auto">
         {done ? (
           <div className="text-center py-6">
-            <div className="text-4xl mb-3">✅</div>
             <p className="font-bold text-gray-800">Thanks for your rating!</p>
             <p className="text-xs text-gray-500 mt-1">Helps the IBD community find better places</p>
           </div>
@@ -95,13 +94,13 @@ export default function RatingSheet({ place, user, onClose }: Props) {
                 <button
                   key={t}
                   onClick={() => setThumbs(t)}
-                  className={`flex-1 py-4 rounded-2xl text-3xl transition-all ${
+                  className={`flex-1 py-4 rounded-2xl text-sm font-bold transition-all ${
                     thumbs === t
-                      ? t === 'up' ? 'bg-green-100 border-2 border-green-400' : 'bg-red-100 border-2 border-red-400'
-                      : 'bg-gray-100'
+                      ? t === 'up' ? 'bg-green-100 border-2 border-green-400 text-green-700' : 'bg-red-100 border-2 border-red-400 text-red-700'
+                      : 'bg-gray-100 text-gray-500'
                   }`}
                 >
-                  {t === 'up' ? '👍' : '👎'}
+                  {t === 'up' ? 'Good' : 'Poor'}
                 </button>
               ))}
             </div>
@@ -109,9 +108,9 @@ export default function RatingSheet({ place, user, onClose }: Props) {
             {/* Checkboxes */}
             <div className="flex flex-col gap-2 mb-5">
               {[
-                { label: '✨ Clean & well maintained', value: clean, set: setClean },
-                { label: '♿ Wheelchair accessible', value: accessible, set: setAccessible },
-                { label: '💜 IBD Friendly', value: ibdFriendly, set: setIbdFriendly },
+                { label: 'Clean & well maintained', value: clean, set: setClean },
+                { label: 'Wheelchair accessible', value: accessible, set: setAccessible },
+                { label: 'IBD Friendly', value: ibdFriendly, set: setIbdFriendly },
               ].map(({ label, value, set }) => (
                 <button
                   key={label}

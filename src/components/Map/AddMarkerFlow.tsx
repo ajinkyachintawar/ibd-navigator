@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../../lib/supabase'
 import type { Category, UserLocation } from '../../types'
 import { isWithinIreland } from '../../hooks/useCommunityPlaces'
+import { PIN_COLOUR, PIN_TINT } from './placeMeta'
 import type { User } from '@supabase/supabase-js'
 
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -15,7 +16,7 @@ const CATEGORIES: { value: Category; label: string }[] = [
 ]
 
 const pinIcon = L.divIcon({
-  html: `<div style="width:20px;height:20px;background:#0f766e;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
+  html: `<div style="width:20px;height:20px;background:#005c4a;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>`,
   className: '',
   iconSize: [20, 20],
   iconAnchor: [10, 10],
@@ -112,19 +113,21 @@ export default function AddMarkerFlow({ user, userLocation, onClose, onAdded }: 
 
             {/* Category */}
             <div className="flex flex-wrap gap-2 mb-4">
-              {CATEGORIES.map(({ value, label }) => (
-                <button
-                  key={value}
-                  onClick={() => setCategory(value)}
-                  className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all ${
-                    category === value
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              {CATEGORIES.map(({ value, label }) => {
+                const active = category === value
+                return (
+                  <button
+                    key={value}
+                    onClick={() => setCategory(value)}
+                    style={active ? { background: PIN_TINT[value], color: PIN_COLOUR[value] } : undefined}
+                    className={`px-3.5 py-2 rounded-full text-sm font-semibold transition-all ${
+                      active ? '' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
 
             {/* Name */}

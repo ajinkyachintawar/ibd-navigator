@@ -48,11 +48,14 @@ export default function SearchBar({ onResult, activeLabel, onClear, dark, onTogg
     <div className="flex flex-col gap-1">
       <form onSubmit={submit} className="flex items-center gap-2">
         <div className="flex-1 flex items-center gap-2 bg-white/95 dark:bg-gray-900/90 backdrop-blur shadow-lg rounded-full px-3 py-2.5 min-w-0">
-          <span className="text-gray-400 text-sm flex-shrink-0">🔍</span>
+          {/* Spec's inline vector magnifying-glass — no emoji/icon font */}
+          <span className="relative w-4 h-4 flex-shrink-0 rounded-full border-2 border-gray-400 dark:border-gray-500">
+            <span className="absolute w-0.5 h-2 bg-gray-400 dark:bg-gray-500 -bottom-1.5 -right-0.5 rotate-45" />
+          </span>
           <input
             value={q}
             onChange={(e) => { setQ(e.target.value); setNotFound(false) }}
-            placeholder={activeLabel ? `📍 ${activeLabel}` : 'Search a town or address…'}
+            placeholder={activeLabel ?? 'Search a town or address…'}
             className="flex-1 bg-transparent outline-none text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 min-w-0"
             aria-label="Search nearby places"
           />

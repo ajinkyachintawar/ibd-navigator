@@ -12,7 +12,7 @@ export default defineConfig({
       name: 'IBD Navigator',
       short_name: 'IBD Nav',
       description: 'Find toilets, pharmacies and IBD-friendly restaurants near you in Ireland.',
-      theme_color: '#6c3fc5',
+      theme_color: '#005c4a',
       background_color: '#ffffff',
       display: 'standalone',
       orientation: 'any',

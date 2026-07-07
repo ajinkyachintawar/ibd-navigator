@@ -17,6 +17,7 @@ import { isOpenNow } from '../../utils/isOpenNow'
 import FlyToUser from './FlyToUser'
 import LocationMarker from './LocationMarker'
 import PlaceMarker from './PlaceMarker'
+import LogoMark from '../LogoMark'
 import PlaceDetailSheet from './PlaceDetailSheet'
 import AddMarkerFlow from './AddMarkerFlow'
 import RatingSheet from '../Ratings/RatingSheet'
@@ -172,7 +173,7 @@ export default function MapView() {
       <aside className="hidden xl:flex flex-col fixed left-0 top-0 bottom-0 w-80 z-[1000] bg-white dark:bg-gray-900 shadow-xl p-4 gap-4 overflow-y-auto">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-brand-700 flex items-center justify-center text-white text-sm font-bold">◐</span>
+            <LogoMark size={32} className="rounded-lg flex-shrink-0" />
             <span className="font-bold text-gray-800 dark:text-gray-100">IBD Navigator</span>
           </div>
           <button
@@ -227,7 +228,7 @@ export default function MapView() {
 
       {/* Tablet icon rail (md–lg): same nav items as the sidebar, icon-only, no labels */}
       <aside className="hidden md:flex xl:hidden flex-col items-center fixed left-0 top-0 bottom-0 w-[76px] z-[1000] bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 py-5 gap-2.5">
-        <span className="w-[30px] h-[30px] rounded-[9px] bg-brand-700 flex-shrink-0" />
+        <LogoMark size={30} className="rounded-[9px] flex-shrink-0" />
         <button
           onClick={toggleDark}
           aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
